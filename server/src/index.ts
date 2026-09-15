@@ -27,7 +27,6 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/rsvps', rsvpRouter)
 app.use('/api/admin', adminRouter)
 
-const __dirname = path.dirname(__filename)
 app.use(express.static(path.join(__dirname, '..', 'public')))
 app.get('/admin', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin.html'))

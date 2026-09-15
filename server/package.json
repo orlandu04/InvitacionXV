@@ -2,6 +2,7 @@
   "name": "invitacion-xv-server",
   "private": true,
   "version": "1.0.0",
+  "type": "commonjs",
   "description": "Backend de confirmación de asistencia vía WhatsApp (Baileys) para la invitación de XV años",
   "main": "dist/index.js",
   "scripts": {
