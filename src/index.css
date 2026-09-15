@@ -1,0 +1,282 @@
+@import 'tailwindcss';
+
+/* ─────────────────────────────────────────────────────────────
+   SISTEMA DE DISEÑO · XV Años — Rosa · Dorado · Elegancia
+   ───────────────────────────────────────────────────────────── */
+
+@theme {
+  /* Paleta */
+  --color-blush: #fff5fa;
+  --color-rose-pastel: #fbcfe8;
+  --color-rose: #f9a8d4;
+  --color-rose-intense: #ec4899;
+  --color-rose-deep: #be185d;
+  --color-rose-dark: #831843;
+  --color-champagne: #fff7ed;
+  --color-gold: #d4af37;
+  --color-gold-light: #f6e27a;
+  --color-gold-deep: #b8860b;
+  --color-ink: #171217;
+
+  /* Tipografía */
+  --font-display: 'Cormorant Garamond', 'Times New Roman', serif;
+  --font-body: 'Montserrat', system-ui, -apple-system, sans-serif;
+  --font-script: 'Great Vibes', 'Segoe Script', cursive;
+
+  /* Animaciones */
+  --animate-spin-slow: spin 14s linear infinite;
+  --animate-float-y: float-y 7s ease-in-out infinite;
+  --animate-twinkle: twinkle 3.2s ease-in-out infinite;
+  --animate-pulse-ring: pulse-ring 2.6s ease-out infinite;
+}
+
+@keyframes float-y {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-14px);
+  }
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.15;
+    transform: scale(0.72) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1) rotate(24deg);
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(1.55);
+    opacity: 0;
+  }
+}
+
+@keyframes shine-sweep {
+  0% {
+    transform: translateX(-130%) skewX(-18deg);
+  }
+  100% {
+    transform: translateX(230%) skewX(-18deg);
+  }
+}
+
+@keyframes fall-petal {
+  0% {
+    transform: translateY(-10vh);
+  }
+  100% {
+    transform: translateY(114vh);
+  }
+}
+
+@keyframes sway-petal {
+  from {
+    transform: translateX(-14px) rotate(-24deg);
+  }
+  to {
+    transform: translateX(16px) rotate(26deg);
+  }
+}
+
+/* Flujo dorado perpetuo para textos gildados */
+@keyframes gilded-flow {
+  to {
+    background-position: -200% center;
+  }
+}
+
+@keyframes eq-bar {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+/* ── Base ─────────────────────────────────────────────────── */
+
+html {
+  scroll-behavior: auto;
+  -webkit-text-size-adjust: 100%;
+}
+
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-blush);
+  color: var(--color-ink);
+  overflow-x: clip;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--color-rose);
+  color: #fff;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-blush);
+}
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(var(--color-rose), var(--color-rose-deep));
+  border-radius: 99px;
+  border: 2px solid var(--color-blush);
+}
+
+img {
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Cursor personalizado activo (solo desktop, lo aplica CustomCursor) */
+html.has-custom-cursor,
+html.has-custom-cursor a,
+html.has-custom-cursor button {
+  cursor: none;
+}
+
+/* ── Utilidades premium ───────────────────────────────────── */
+
+@utility text-gilded {
+  background: linear-gradient(
+    100deg,
+    #a97f1f 0%,
+    var(--color-gold) 28%,
+    #fdf0c0 50%,
+    var(--color-gold) 72%,
+    #9c7118 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility gold-hairline {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--color-gold) 65%, transparent),
+    transparent
+  );
+  height: 1px;
+}
+
+@utility glass-panel {
+  background: color-mix(in srgb, white 10%, transparent);
+  border: 1px solid color-mix(in srgb, white 22%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+@utility glass-light {
+  background: color-mix(in srgb, white 55%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-rose-pastel) 60%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Grano fílmico sutil */
+@utility grain {
+  position: relative;
+}
+.grain::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  z-index: 1;
+}
+
+/* Dispositivos de gama baja: sin blur costoso */
+.no-blur .glass-panel,
+.no-blur .glass-light {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: color-mix(in srgb, white 16%, transparent);
+}
+.no-blur .glass-light {
+  background: color-mix(in srgb, white 78%, transparent);
+}
+.no-blur .light-leak {
+  filter: none !important;
+  opacity: calc(var(--leak-opacity, 0.5) * 0.55);
+}
+
+/* Barras ecualizador del reproductor */
+.eq-bar {
+  animation: eq-bar 1s ease-in-out infinite;
+  transform-origin: bottom;
+}
+
+/* Tipos helper */
+.type-display-xl {
+  font-family: var(--font-display);
+  font-size: clamp(2.75rem, 9vw, 7rem);
+  line-height: 1.02;
+  letter-spacing: 0.01em;
+}
+
+.type-script-hero {
+  font-family: var(--font-script);
+  font-size: clamp(4rem, 17vw, 12.5rem);
+  line-height: 1.08;
+}
+
+.eyebrow {
+  font-family: var(--font-body);
+  font-weight: 400;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  font-size: clamp(0.6rem, 2.4vw, 0.78rem);
+}
+
+/* ── Reduced motion global ────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.15s !important;
+  }
+}

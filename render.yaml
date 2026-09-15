@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: invitacion-xv-server
+    runtime: node
+    rootDir: server
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: QUINCEANERA
+        value: Tania
+      - key: EVENT_DATE
+        value: 28 de noviembre, 2026
+      - key: DEFAULT_COUNTRY_CODE
+        value: "52"
+      - key: MONGODB_URI
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false

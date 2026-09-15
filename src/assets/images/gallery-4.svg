@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1200" viewBox="0 0 900 1200">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.7" y2="1">
+      <stop offset="0" stop-color="#831843"/>
+      <stop offset="0.55" stop-color="#BE185D"/>
+      <stop offset="1" stop-color="#EC4899"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0.5" cy="0.38" r="0.62">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vignette" cx="0.5" cy="0.5" r="0.75">
+      <stop offset="0.55" stop-color="#171217" stop-opacity="0"/>
+      <stop offset="1" stop-color="#171217" stop-opacity="0.5"/>
+    </radialGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="23"/>
+    </filter>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+    </filter>
+  </defs>
+
+  <rect width="900" height="1200" fill="url(#bg)"/>
+  <rect width="900" height="1200" fill="url(#halo)"/>
+
+  <!-- fugas de luz -->
+  <circle cx="738" cy="240" r="270" fill="#EC4899" opacity="0.35" filter="url(#soft)"/>
+  <circle cx="135" cy="936" r="234" fill="#831843" opacity="0.4" filter="url(#soft)"/>
+
+  <circle cx="NaN" cy="NaN" r="NaN" fill="#D4AF37" opacity="NaN"/><circle cx="NaN" cy="NaN" r="NaN" fill="#D4AF37" opacity="NaN"/><circle cx="NaN" cy="NaN" r="NaN" fill="#D4AF37" opacity="NaN"/><circle cx="NaN" cy="NaN" r="NaN" fill="#D4AF37" opacity="NaN"/><circle cx="NaN" cy="NaN" r="NaN" fill="#D4AF37" opacity="NaN"/><circle cx="NaN" cy="NaN" r="NaN" fill="#D4AF37" opacity="NaN"/><circle cx="NaN" cy="NaN" r="NaN" fill="#D4AF37" opacity="NaN"/><circle cx="NaN" cy="NaN" r="NaN" fill="#D4AF37" opacity="NaN"/><circle cx="NaN" cy="NaN" r="NaN" fill="#D4AF37" opacity="NaN"/><circle cx="NaN" cy="NaN" r="NaN" fill="#D4AF37" opacity="NaN"/><circle cx="NaN" cy="NaN" r="NaN" fill="#D4AF37" opacity="NaN"/><circle cx="NaN" cy="NaN" r="NaN" fill="#D4AF37" opacity="NaN"/><circle cx="NaN" cy="NaN" r="NaN" fill="#D4AF37" opacity="NaN"/><circle cx="NaN" cy="NaN" r="NaN" fill="#D4AF37" opacity="NaN"/><circle cx="NaN" cy="NaN" r="NaN" fill="#D4AF37" opacity="NaN"/><circle cx="NaN" cy="NaN" r="NaN" fill="#D4AF37" opacity="NaN"/><circle cx="NaN" cy="NaN" r="NaN" fill="#D4AF37" opacity="NaN"/><circle cx="NaN" cy="NaN" r="NaN" fill="#D4AF37" opacity="NaN"/><circle cx="NaN" cy="NaN" r="NaN" fill="#D4AF37" opacity="NaN"/><circle cx="NaN" cy="NaN" r="NaN" fill="#D4AF37" opacity="NaN"/><circle cx="NaN" cy="NaN" r="NaN" fill="#D4AF37" opacity="NaN"/><circle cx="NaN" cy="NaN" r="NaN" fill="#D4AF37" opacity="NaN"/><circle cx="NaN" cy="NaN" r="NaN" fill="#D4AF37" opacity="NaN"/><circle cx="NaN" cy="NaN" r="NaN" fill="#D4AF37" opacity="NaN"/><circle cx="NaN" cy="NaN" r="NaN" fill="#D4AF37" opacity="NaN"/><circle cx="NaN" cy="NaN" r="NaN" fill="#D4AF37" opacity="NaN"/>
+
+  <!-- flores -->
+  
+  <g transform="translate(144 1032) rotate(-14) scale(1)" opacity="0.85">
+    <path d="M0 0 C 14 -40 10 -90 -6 -130" fill="none" stroke="#D4AF37" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M-2 -46 C -30 -52 -44 -74 -42 -98 C -18 -92 -6 -72 -2 -46 Z" fill="#FBCFE8" opacity="0.5"/>
+    <path d="M2 -70 C 28 -80 38 -102 34 -124 C 12 -116 2 -94 2 -70 Z" fill="#FBCFE8" opacity="0.35"/>
+    <g transform="translate(-6 -134)">
+      <ellipse cx="-7" cy="-3" rx="8" ry="12" transform="rotate(-32)" fill="#FBCFE8" opacity="0.75"/>
+      <ellipse cx="7" cy="-4" rx="8" ry="12" transform="rotate(28)" fill="#FBCFE8" opacity="0.65"/>
+      <circle cx="0" cy="-1" r="4.5" fill="#F6E27A"/>
+      <path d="M-16 6 C -22 -6 -20 -20 -10 -26 M 16 6 C 22 -6 20 -20 10 -26" stroke="#D4AF37" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+    </g>
+  </g>
+  
+  <g transform="translate(756 1080) rotate(16) scale(0.8)" opacity="0.85">
+    <path d="M0 0 C 14 -40 10 -90 -6 -130" fill="none" stroke="#D4AF37" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M-2 -46 C -30 -52 -44 -74 -42 -98 C -18 -92 -6 -72 -2 -46 Z" fill="#FBCFE8" opacity="0.5"/>
+    <path d="M2 -70 C 28 -80 38 -102 34 -124 C 12 -116 2 -94 2 -70 Z" fill="#FBCFE8" opacity="0.35"/>
+    <g transform="translate(-6 -134)">
+      <ellipse cx="-7" cy="-3" rx="8" ry="12" transform="rotate(-32)" fill="#FBCFE8" opacity="0.75"/>
+      <ellipse cx="7" cy="-4" rx="8" ry="12" transform="rotate(28)" fill="#FBCFE8" opacity="0.65"/>
+      <circle cx="0" cy="-1" r="4.5" fill="#F6E27A"/>
+      <path d="M-16 6 C -22 -6 -20 -20 -10 -26 M 16 6 C 22 -6 20 -20 10 -26" stroke="#D4AF37" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+    </g>
+  </g>
+  
+  <g transform="translate(684 288) rotate(30) scale(0.62)" opacity="0.85">
+    <path d="M0 0 C 14 -40 10 -90 -6 -130" fill="none" stroke="#D4AF37" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M-2 -46 C -30 -52 -44 -74 -42 -98 C -18 -92 -6 -72 -2 -46 Z" fill="#FBCFE8" opacity="0.5"/>
+    <path d="M2 -70 C 28 -80 38 -102 34 -124 C 12 -116 2 -94 2 -70 Z" fill="#FBCFE8" opacity="0.35"/>
+    <g transform="translate(-6 -134)">
+      <ellipse cx="-7" cy="-3" rx="8" ry="12" transform="rotate(-32)" fill="#FBCFE8" opacity="0.75"/>
+      <ellipse cx="7" cy="-4" rx="8" ry="12" transform="rotate(28)" fill="#FBCFE8" opacity="0.65"/>
+      <circle cx="0" cy="-1" r="4.5" fill="#F6E27A"/>
+      <path d="M-16 6 C -22 -6 -20 -20 -10 -26 M 16 6 C 22 -6 20 -20 10 -26" stroke="#D4AF37" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+    </g>
+  </g>
+
+  <!-- silueta elegante central -->
+  <g transform="translate(450 672.0000000000001)">
+    <path d="M -81 288
+             C -99 60 -63.00000000000001 -72 0 -96
+             C 63.00000000000001 -72 99 60 81 288
+             C 27 324 -27 324 -81 288 Z"
+          fill="#171217" opacity="0.16"/>
+    <!-- cabeza -->
+    <circle cx="0" cy="-162" r="43.2" fill="#171217" opacity="0.16"/>
+    <!-- velo -->
+    <path d="M -45 -204.00000000000003
+             C -90 -120 -81 24 -27 72
+             M 45 -204.00000000000003
+             C 90 -120 81 24 27 72"
+          stroke="#D4AF37" stroke-width="2.6470588235294117" fill="none" opacity="0.5" stroke-linecap="round"/>
+  </g>
+
+  <!-- marco fino -->
+  <rect x="40.5" y="54" width="819" height="1092"
+        fill="none" stroke="#D4AF37" stroke-opacity="0.55" stroke-width="1.6"/>
+
+  <rect width="900" height="1200" fill="url(#vignette)"/>
+  <rect width="900" height="1200" filter="url(#grain)" opacity="0.05"/>
+
+  <!-- leyenda -->
+  <text x="450" y="1110" text-anchor="middle"
+        font-family="Georgia, 'Times New Roman', serif" font-style="italic"
+        font-size="35" letter-spacing="11"
+        fill="#831843" opacity="0.9">IV</text>
+</svg>
