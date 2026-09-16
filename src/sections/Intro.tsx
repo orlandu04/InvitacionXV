@@ -1,9 +1,6 @@
 import { motion } from 'framer-motion'
 import { useLayoutEffect, useRef, useState } from 'react'
 
-import gallery1 from '../assets/images/gallery-1.svg'
-import gallery2 from '../assets/images/gallery-2.svg'
-import gallery3 from '../assets/images/gallery-3.svg'
 import heroImg from '../assets/images/hero.svg'
 import floralCorner from '../assets/florals/floral-corner.svg'
 import { Petals } from '../components/effects/Petals'
@@ -15,7 +12,7 @@ import { useInvitation } from '../hooks/useInvitation'
 /* ── Precarga de recursos críticos con progreso real ─────── */
 
 function criticalImageSources(): string[] {
-  return [heroImg, gallery1, gallery2, gallery3]
+  return [heroImg]
 }
 
 async function preloadCritical(onProgress: (ratio: number) => void): Promise<void> {

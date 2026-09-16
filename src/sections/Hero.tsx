@@ -143,7 +143,7 @@ export function Hero(): React.JSX.Element {
 
       {/* Indicador de scroll */}
       <div className="hero-scroll absolute bottom-7 left-0 right-0 z-10 motion-reduce:hidden">
-        <ScrollIndicator target="#gallery" />
+        <ScrollIndicator target="#countdown" />
       </div>
     </section>
   )

@@ -14,7 +14,6 @@ import { Countdown } from './sections/Countdown'
 import { DressCode } from './sections/DressCode'
 import { Event } from './sections/Event'
 import { Finale } from './sections/Finale'
-import { Gallery } from './sections/Gallery'
 import { Hero } from './sections/Hero'
 import { Intro } from './sections/Intro'
 import { Location } from './sections/Location'
@@ -60,7 +59,6 @@ function Experience(): React.JSX.Element {
           <main aria-label={`Invitación a los XV años de ${invitation.name}`}>
             <Hero />
             <CurtainTransition />
-            <Gallery />
             <Countdown />
             <Event />
             <DressCode />
