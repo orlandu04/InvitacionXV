@@ -33,6 +33,13 @@ export const invitation = {
     buttonLabel: 'Abrir invitación',
   },
 
+  dedication: {
+    eyebrow: 'Mis XV años',
+    heading: 'Una nueva etapa',
+    phrase:
+      'Cada paso me trajo hasta aquí… ahora te invito a celebrar junto a mí el inicio de una nueva etapa.',
+  },
+
   gallerySection: {
     eyebrow: 'Momentos',
     heading: 'Recuerdos que brillan',

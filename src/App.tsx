@@ -11,6 +11,7 @@ import { useInvitation } from './hooks/useInvitation'
 import { useLenis } from './hooks/useLenis'
 import { getPerformanceLevel } from './hooks/usePerformance'
 import { Countdown } from './sections/Countdown'
+import { Dedication } from './sections/Dedication'
 import { DressCode } from './sections/DressCode'
 import { Event } from './sections/Event'
 import { Finale } from './sections/Finale'
@@ -59,6 +60,7 @@ function Experience(): React.JSX.Element {
           <main aria-label={`Invitación a los XV años de ${invitation.name}`}>
             <Hero />
             <CurtainTransition />
+            <Dedication />
             <Countdown />
             <Event />
             <DressCode />
