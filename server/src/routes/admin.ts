@@ -3,6 +3,7 @@ import { config } from '../config'
 import { Rsvp } from '../db/models/Rsvp'
 import { requireAdmin, ADMIN_COOKIE } from '../middleware/auth'
 import { getRsvpTemplate, renderTemplate, setRsvpTemplate, MESSAGE_PLACEHOLDERS } from '../settings'
+import { normalizePhone } from '../utils/phone'
 import { getStatus, logoutWhatsApp, sendMessage } from '../whatsapp/client'
 import { onEvent } from '../whatsapp/events'
 
@@ -70,6 +71,28 @@ adminRouter.post('/whatsapp/logout', requireAdmin, async (_req, res) => {
   }
 })
 
+/* ── Prueba de envío WhatsApp ─────────────────────────────── */
+
+adminRouter.post('/whatsapp/test', requireAdmin, async (req, res) => {
+  const { telefono } = (req.body ?? {}) as { telefono?: unknown }
+  if (typeof telefono !== 'string' || !telefono.trim()) {
+    res.status(400).json({ error: 'Escribe un número de celular' })
+    return
+  }
+  const parsed = normalizePhone(telefono)
+  if (!parsed.ok) {
+    res.status(400).json({ error: parsed.error })
+    return
+  }
+  const mensaje = await buildMessage('Mensaje de prueba')
+  try {
+    await sendMessage(parsed.phone, mensaje)
+    res.json({ ok: true, jid: `${parsed.phone}@s.whatsapp.net`, mensaje: `Enviado a ${parsed.phone}@s.whatsapp.net` })
+  } catch (error) {
+    res.status(502).json({ error: error instanceof Error ? error.message : 'WhatsApp no conectado' })
+  }
+})
+
 /* ── Mensaje personalizado ───────────────────────────────── */
 
 adminRouter.get('/message', requireAdmin, async (_req, res) => {
@@ -97,6 +120,7 @@ adminRouter.get('/rsvps', requireAdmin, async (_req, res) => {
       telefono: doc.telefono,
       mensaje: doc.mensaje,
       enviado: doc.enviado,
+      estado: doc.estado,
       fecha: doc.createdAt,
     })),
   })
@@ -110,8 +134,8 @@ adminRouter.post('/rsvps/:id/resend', requireAdmin, async (req, res) => {
   }
   try {
     const mensaje = await buildMessage(doc.nombre)
-    await sendMessage(doc.telefono, mensaje)
-    await doc.updateOne({ $set: { mensaje, enviado: true } })
+    await sendMessage(doc.telefono, mensaje, { rsvpId: doc.id })
+    await doc.updateOne({ $set: { mensaje, enviado: true, estado: 'enviado' } })
     res.json({ ok: true, mensaje })
   } catch {
     res.status(502).json({ error: 'WhatsApp no conectado, intenta más tarde' })
@@ -124,8 +148,8 @@ adminRouter.post('/rsvps/broadcast', requireAdmin, async (_req, res) => {
   for (const doc of docs) {
     try {
       const mensaje = await buildMessage(doc.nombre)
-      await sendMessage(doc.telefono, mensaje)
-      await Rsvp.updateOne({ _id: doc._id }, { $set: { mensaje, enviado: true } })
+      await sendMessage(doc.telefono, mensaje, { rsvpId: String(doc._id) })
+      await Rsvp.updateOne({ _id: doc._id }, { $set: { mensaje, enviado: true, estado: 'enviado' } })
       rows.enviados += 1
     } catch {
       rows.pendientes += 1

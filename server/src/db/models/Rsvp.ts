@@ -5,6 +5,7 @@ export interface RsvpDoc {
   telefono: string
   mensaje: string
   enviado: boolean
+  estado?: 'pendiente' | 'enviado' | 'entregado' | 'error'
   createdAt: Date
 }
 
@@ -14,6 +15,11 @@ const rsvpSchema = new Schema<RsvpDoc>(
     telefono: { type: String, required: true, trim: true },
     mensaje: { type: String, default: '' },
     enviado: { type: Boolean, default: false },
+    estado: {
+      type: String,
+      enum: ['pendiente', 'enviado', 'entregado', 'error'],
+      default: 'pendiente',
+    },
   },
   { timestamps: { createdAt: true, updatedAt: false } },
 )

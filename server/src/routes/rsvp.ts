@@ -39,13 +39,13 @@ rsvpRouter.post('/', async (req, res) => {
   })
 
   try {
-    await sendMessage(parsed.phone, mensaje)
-    await doc.updateOne({ $set: { mensaje, enviado: true } })
+    await sendMessage(parsed.phone, mensaje, { rsvpId: doc.id })
+    await doc.updateOne({ $set: { mensaje, enviado: true, estado: 'enviado' } })
     console.log(`[rsvp] ${doc.nombre} (${parsed.phone}) confirmó · mensaje enviado`)
     res.status(201).json({ ok: true, id: doc.id, mensaje })
   } catch {
     // WhatsApp temporalmente no disponible: igual se registra la confirmación.
-    await doc.updateOne({ $set: { mensaje } })
+    await doc.updateOne({ $set: { mensaje, estado: 'pendiente' } })
     console.warn(`[rsvp] ${doc.nombre} (${parsed.phone}) confirmó · WhatsApp pendiente`)
     res.status(201).json({ ok: true, id: doc.id, mensaje, whatsapp: 'pendiente' })
   }

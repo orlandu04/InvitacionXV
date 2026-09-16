@@ -154,6 +154,17 @@
           <div id="msgMsg" class="msg"></div>
         </div>
 
+        <!-- Prueba de envío WhatsApp -->
+        <div class="card">
+          <h2>Probar envío de WhatsApp</h2>
+          <label for="testPhone">Número de celular de prueba</label>
+          <input id="testPhone" type="text" inputmode="tel" placeholder="Ej. 222 123 4567 (10 dígitos sin lada)" />
+          <div class="row">
+            <button id="testSendBtn" type="button">Enviar mensaje de prueba</button>
+          </div>
+          <div id="testMsg" class="msg"></div>
+        </div>
+
         <!-- RSVPs -->
         <div class="card">
           <h2>Confirmaciones recibidas</h2>
@@ -278,6 +289,20 @@
         say('msgMsg', '', '')
       }
 
+      /* ── Prueba WhatsApp ── */
+      $('testSendBtn').onclick = async () => {
+        const telefono = $('testPhone').value.trim()
+        if (!telefono) return say('testMsg', 'Escribe un número de celular', 'err')
+        say('testMsg', 'Enviando…', '')
+        try {
+          const r = await api('/admin/whatsapp/test', { method: 'POST', body: JSON.stringify({ telefono }) })
+          say('testMsg', r.mensaje + '. Revisa los logs de Render para el estado de entrega (enviado/entregado).', 'ok')
+        } catch (e) {
+          say('testMsg', e.message, 'err')
+        }
+      }
+      $('testPhone').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('testSendBtn').click() })
+
       $('sendAllBtn').onclick = async () => {
         if (!confirm('¿Enviar el mensaje personalizado a todos los confirmados?')) return
         say('msgMsg', 'Enviando…', '')
@@ -306,11 +331,13 @@
             rows
               .map((r) => {
                 const fecha = new Date(r.fecha).toLocaleString('es-MX', { day: '2-digit', month: 'short' })
+                const estado = r.estado || (r.enviado ? 'enviado' : 'pendiente')
+                const chip = { pendiente: ['no', 'Pendiente'], enviado: ['yes', 'Enviado'], entregado: ['yes', 'Entregado'], error: ['no', 'Error'] }[estado] || ['no', estado]
                 return `<tr>
                   <td><strong>${escapeHtml(r.nombre)}</strong></td>
                   <td>${escapeHtml(r.telefono)}</td>
                   <td>${fecha}</td>
-                  <td><span class="chip ${r.enviado ? 'yes' : 'no'}">${r.enviado ? 'Enviado' : 'Pendiente'}</span></td>
+                  <td><span class="chip ${chip[0]}">${chip[1]}</span></td>
                   <td><div class="actions">
                     <button data-resend="${r.id}" class="ghost" type="button">Reenviar</button>
                     <button data-del="${r.id}" class="ghost" type="button">Borrar</button>

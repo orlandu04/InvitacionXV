@@ -32,4 +32,11 @@ export const config = {
 
   /** Código de país que se agrega si el invitado escribe solo 10 dígitos */
   defaultCountryCode: process.env.DEFAULT_COUNTRY_CODE || '52',
+
+  /**
+   * Dígito móvil que WhatsApp exige tras el código de país para algunos países
+   * (ej. México requiere "1" tras "52": 10 dígitos → 521XXXXXXXXXX).
+   * Vacío para países sin este requisito.
+   */
+  mobilePrefix: process.env.MOBILE_PREFIX || '1',
 } as const

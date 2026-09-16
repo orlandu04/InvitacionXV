@@ -9,6 +9,27 @@ editando **un solo archivo** — sin tocar componentes.
 React 19 · TypeScript estricto · Vite · Tailwind CSS v4 · GSAP + ScrollTrigger ·
 Framer Motion · Three.js (React Three Fiber) · Lenis · Lucide · PWA
 
+## Backend (confirmación por WhatsApp)
+
+El proyecto incluye un backend Express + Baileys en `server/` que registra las
+confirmaciones en MongoDB y envía el WhatsApp de confirmación.
+
+### Nota sobre entrega de mensajes (México + antispam)
+
+- **Formato**: para celulares de México, WhatsApp exige el `1` después del `52`
+  en el número de destino (ej. `2221234567` → `5212221234567`). El server lo
+  aplica automáticamente (`MOBILE_PREFIX` en el entorno, default `1`).
+- **Entrega real ≠ "enviado"**: Baileys marca el envío apenas escribe al socket.
+  El server ahora escucha `messages.update` y registra el estado real
+  (`enviado` → `entregado` / `error`) en los logs de Render y en el panel `/admin`.
+- **Antispam**: WhatsApp puede descartar silenciosamente mensajes hacia números
+  que no te tienen agregado como contacto (sobre todo en líneas nuevas).
+  Recomendación: guarda el número del invitado en el teléfono vinculado o
+  márcalo/escópele un mensaje manual antes de los envíos masivos.
+- **Prueba**: usa el campo "Probar envío de WhatsApp" del panel `/admin` y
+  revisa en Render: `[whatsapp] enviando → 5212221234567@s.whatsapp.net` y
+  luego `entregado ✓`.
+
 ## Desarrollo
 
 ```bash
