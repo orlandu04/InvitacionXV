@@ -5,6 +5,7 @@ import gallery1 from '../assets/images/gallery-1.svg'
 import gallery2 from '../assets/images/gallery-2.svg'
 import gallery3 from '../assets/images/gallery-3.svg'
 import heroImg from '../assets/images/hero.svg'
+import floralCorner from '../assets/florals/floral-corner.svg'
 import { Petals } from '../components/effects/Petals'
 import { Sparkles } from '../components/effects/Sparkles'
 import { GlowButton } from '../components/ui/GlowButton'
@@ -93,8 +94,26 @@ export function Intro(): React.JSX.Element {
       exit={{ opacity: 0, scale: 1.07, filter: 'blur(10px)' }}
       transition={{ duration: 0.95, ease: [0.22, 1, 0.36, 1] }}
     >
-      <Sparkles density={1.2} />
-      <Petals density={0.6} />
+      <Sparkles density={1.4} />
+      <Petals density={0.8} />
+
+      {/* Floral decorativo en la zona inferior para llenar la pantalla */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+        <img
+          src={floralCorner}
+          alt=""
+          draggable={false}
+          className="absolute -bottom-8 -right-10 opacity-40"
+          style={{ width: 170, transform: 'scale(-1, 1)' }}
+        />
+        <img
+          src={floralCorner}
+          alt=""
+          draggable={false}
+          className="absolute -bottom-8 -left-10 opacity-40"
+          style={{ width: 170 }}
+        />
+      </div>
 
       {/* ráfaga al abrir */}
       {opening && (
@@ -201,7 +220,7 @@ function Welcome({
   onOpen: () => void
 }): React.JSX.Element {
   return (
-    <motion.div className="relative z-10 flex h-full flex-col items-center px-6 py-[max(4vh,20px)] text-center">
+    <motion.div className="relative z-10 flex h-full flex-col items-center px-6 pt-[max(5vh,28px)] pb-[max(7vh,36px)] text-center">
       {/* Zona superior: contenido repartido con aire entre elementos */}
       <motion.div
         variants={welcomeContainer}
@@ -238,9 +257,9 @@ function Welcome({
         </motion.p>
       </motion.div>
 
-      {/* Botón anclado en la parte baja */}
+      {/* Botón anclado en la parte inferior (último tercio) */}
       <motion.div
-        className="mt-[5vh] pb-[3vh]"
+        className="mt-[3vh]"
         initial={{ opacity: 0, y: 26 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1.6, duration: 0.8, ease: EASE }}
@@ -248,7 +267,44 @@ function Welcome({
         <GlowButton variant="gold" onClick={onOpen} ariaLabel="Abrir la invitación" className="!px-12 !py-5">
           {opening ? 'Un momento…' : invitation.welcome.buttonLabel}
         </GlowButton>
+
+        {/* Detalle ornamental dorado bajo el botón */}
+        <motion.div
+          className="mt-6 flex items-center justify-center gap-3 opacity-80"
+          aria-hidden="true"
+          initial={{ opacity: 0, scale: 0.7 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 2.1, duration: 0.8, ease: EASE }}
+        >
+          <span className="gold-hairline w-9" />
+          <span className="h-1.5 w-1.5 rotate-45 bg-gold" />
+          <span className="gold-hairline w-9" />
+        </motion.div>
       </motion.div>
+
+      {/* Destellos de relleno en la zona inferior */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-[3vh]">
+        {[
+          { left: '12%', size: 10, delay: 0.6 },
+          { left: '50%', size: 8, delay: 1.4 },
+          { left: '86%', size: 11, delay: 0.2 },
+        ].map((s, i) => (
+          <svg
+            key={i}
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            className="absolute text-gold-light"
+            style={{
+              left: s.left,
+              width: s.size,
+              height: s.size,
+              animation: `twinkle ${2.6 + i * 0.4}s ease-in-out ${s.delay}s infinite`,
+            }}
+          >
+            <path d="M12 0c.9 6.8 4.3 10.2 12 12-7.7 1.8-11.1 5.2-12 12-.9-6.8-4.3-10.2-12-12C7.7 10.2 11.1 6.8 12 0Z" />
+          </svg>
+        ))}
+      </div>
     </motion.div>
   )
 }
