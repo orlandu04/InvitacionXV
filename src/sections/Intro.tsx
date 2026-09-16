@@ -203,20 +203,20 @@ function Welcome({
       variants={welcomeContainer}
       initial="hidden"
       animate="show"
-      className="relative z-10 flex h-full flex-col items-center justify-center px-6 text-center"
+      className="relative z-10 flex h-full flex-col items-center justify-evenly px-6 py-[max(4vh,20px)] text-center"
     >
-      <motion.p variants={welcomeItem} className="font-display text-lg italic text-rose-dark/90 sm:text-xl">
+      <motion.p variants={welcomeItem} className="font-display text-xl italic text-rose-dark/90 sm:text-2xl">
         {invitation.welcome.message}
       </motion.p>
 
       <motion.h1
         variants={welcomeItem}
-        className="text-gilded type-script-hero mt-4 drop-shadow-[0_2px_20px_rgba(190,24,93,0.25)]"
+        className="text-gilded type-script-hero mt-2 drop-shadow-[0_2px_20px_rgba(190,24,93,0.25)]"
       >
         {NAME}
       </motion.h1>
 
-      <motion.div variants={welcomeItem} className="mt-2 flex items-center gap-4" aria-hidden="true">
+      <motion.div variants={welcomeItem} className="flex items-center gap-4" aria-hidden="true">
         <span className="gold-hairline w-14 sm:w-20" />
         <span className="h-1.5 w-1.5 rotate-45 bg-gold" />
         <span className="gold-hairline w-14 sm:w-20" />
@@ -224,19 +224,19 @@ function Welcome({
 
       <motion.p
         variants={welcomeItem}
-        className="mt-6 font-display text-xl font-medium tracking-[0.5em] text-rose-deep sm:text-2xl"
+        className="font-display text-xl font-medium tracking-[0.5em] text-rose-deep sm:text-2xl"
       >
         XV AÑOS
       </motion.p>
 
       <motion.p
         variants={welcomeItem}
-        className="eyebrow mt-10 text-ink/60"
+        className="eyebrow text-ink/60"
       >
         28 · Noviembre · 2026
       </motion.p>
 
-      <motion.div variants={welcomeItem} className="mt-9">
+      <motion.div variants={welcomeItem} className="pb-1">
         <GlowButton variant="gold" onClick={onOpen} ariaLabel="Abrir la invitación" className="!px-12 !py-5">
           {opening ? 'Un momento…' : invitation.welcome.buttonLabel}
         </GlowButton>
