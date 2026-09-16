@@ -47,6 +47,8 @@ async function preloadCritical(onProgress: (ratio: number) => void): Promise<voi
 const MIN_LOAD_MS = 1500
 const MAX_LOAD_MS = 3500
 
+const EASE = [0.22, 1, 0.36, 1] as const
+
 export function Intro(): React.JSX.Element {
   const { openInvitation, audio } = useInvitation()
   const [phase, setPhase] = useState<'loading' | 'welcome'>('loading')
@@ -199,44 +201,50 @@ function Welcome({
   onOpen: () => void
 }): React.JSX.Element {
   return (
-    <motion.div
-      variants={welcomeContainer}
-      initial="hidden"
-      animate="show"
-      className="relative z-10 flex h-full flex-col items-center justify-evenly px-6 py-[max(4vh,20px)] text-center"
-    >
-      <motion.p variants={welcomeItem} className="font-display text-xl italic text-rose-dark/90 sm:text-2xl">
-        {invitation.welcome.message}
-      </motion.p>
-
-      <motion.h1
-        variants={welcomeItem}
-        className="text-gilded type-script-hero mt-2 drop-shadow-[0_2px_20px_rgba(190,24,93,0.25)]"
+    <motion.div className="relative z-10 flex h-full flex-col items-center px-6 py-[max(4vh,20px)] text-center">
+      {/* Zona superior: contenido repartido con aire entre elementos */}
+      <motion.div
+        variants={welcomeContainer}
+        initial="hidden"
+        animate="show"
+        className="flex w-full flex-1 flex-col items-center justify-evenly"
       >
-        {NAME}
-      </motion.h1>
+        <motion.p variants={welcomeItem} className="font-display text-xl italic text-rose-dark/90 sm:text-2xl">
+          {invitation.welcome.message}
+        </motion.p>
 
-      <motion.div variants={welcomeItem} className="flex items-center gap-4" aria-hidden="true">
-        <span className="gold-hairline w-14 sm:w-20" />
-        <span className="h-1.5 w-1.5 rotate-45 bg-gold" />
-        <span className="gold-hairline w-14 sm:w-20" />
+        <motion.h1
+          variants={welcomeItem}
+          className="text-gilded type-script-hero drop-shadow-[0_2px_20px_rgba(190,24,93,0.25)]"
+        >
+          {NAME}
+        </motion.h1>
+
+        <motion.div variants={welcomeItem} className="flex items-center gap-4" aria-hidden="true">
+          <span className="gold-hairline w-14 sm:w-20" />
+          <span className="h-1.5 w-1.5 rotate-45 bg-gold" />
+          <span className="gold-hairline w-14 sm:w-20" />
+        </motion.div>
+
+        <motion.p
+          variants={welcomeItem}
+          className="font-display text-xl font-medium tracking-[0.5em] text-rose-deep sm:text-2xl"
+        >
+          XV AÑOS
+        </motion.p>
+
+        <motion.p variants={welcomeItem} className="eyebrow text-ink/60">
+          28 · Noviembre · 2026
+        </motion.p>
       </motion.div>
 
-      <motion.p
-        variants={welcomeItem}
-        className="font-display text-xl font-medium tracking-[0.5em] text-rose-deep sm:text-2xl"
+      {/* Botón anclado en la parte baja */}
+      <motion.div
+        className="mt-[5vh] pb-[3vh]"
+        initial={{ opacity: 0, y: 26 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 1.6, duration: 0.8, ease: EASE }}
       >
-        XV AÑOS
-      </motion.p>
-
-      <motion.p
-        variants={welcomeItem}
-        className="eyebrow text-ink/60"
-      >
-        28 · Noviembre · 2026
-      </motion.p>
-
-      <motion.div variants={welcomeItem} className="pb-1">
         <GlowButton variant="gold" onClick={onOpen} ariaLabel="Abrir la invitación" className="!px-12 !py-5">
           {opening ? 'Un momento…' : invitation.welcome.buttonLabel}
         </GlowButton>
