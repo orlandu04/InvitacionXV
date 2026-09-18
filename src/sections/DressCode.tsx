@@ -56,9 +56,24 @@ export function DressCode(): React.JSX.Element {
           viewport={{ once: true }}
           transition={{ duration: 1, delay: 0.25 }}
         >
-          <p className="mt-5 font-display text-base italic text-ink/60">
-            {invitation.dressCode.note}
-          </p>
+          {/* aviso destacado */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.9, delay: 0.2, ease: EASE }}
+            className="mx-auto mt-8 max-w-sm rounded-2xl border border-rose-intense/40 bg-gradient-to-b from-white/70 to-rose-pastel/30 px-6 py-5 shadow-[0_10px_30px_rgba(190,24,93,0.14)]"
+            role="note"
+          >
+            <p className="font-body text-[0.6rem] font-semibold uppercase tracking-[0.32em] text-gold-deep">
+              Por favor
+            </p>
+            <p className="mt-1 font-script text-4xl leading-tight text-rose-deep sm:text-5xl">
+              <span className="underline decoration-rose-intense/50 decoration-2 underline-offset-8">
+                Evita el color rosa
+              </span>
+            </p>
+          </motion.div>
         </motion.div>
       </div>
     </section>

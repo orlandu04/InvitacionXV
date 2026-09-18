@@ -85,7 +85,6 @@ export const invitation = {
   dressCode: {
     heading: 'Vestimenta',
     value: 'Formal',
-    note: 'Evita el color rosa',
   },
 
   location: {
