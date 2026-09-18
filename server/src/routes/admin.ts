@@ -86,8 +86,14 @@ adminRouter.post('/whatsapp/test', requireAdmin, async (req, res) => {
   }
   const mensaje = await buildMessage('Mensaje de prueba')
   try {
-    await sendMessage(parsed.phone, mensaje)
-    res.json({ ok: true, jid: `${parsed.phone}@s.whatsapp.net`, mensaje: `Enviado a ${parsed.phone}@s.whatsapp.net` })
+    const { messageId } = await sendMessage(parsed.phone, mensaje)
+    const jid = `${parsed.phone}@s.whatsapp.net`
+    res.json({
+      ok: true,
+      jid,
+      messageId,
+      mensaje: `Salió de la sesión a ${jid}. "Enviado" solo significa que se escribió en WhatsApp; revisa en la app si llega (puede quedar en "Esperando el mensaje" si el teléfono no tiene WhatsApp o está apagado).`,
+    })
   } catch (error) {
     res.status(502).json({ error: error instanceof Error ? error.message : 'WhatsApp no conectado' })
   }

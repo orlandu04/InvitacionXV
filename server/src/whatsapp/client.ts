@@ -24,24 +24,63 @@ export interface ConnectionStatus {
 let socket: WASocket | null = null
 let reconnectTimer: NodeJS.Timeout | null = null
 let status: ConnectionStatus = { state: 'connecting', message: 'Conectando…' }
+let watchdogStarted = false
 
-const pendingByJid = new Map<string, Array<{ rsvpId?: string; at: number }>>()
-
-function trackPending(jid: string, meta: { rsvpId?: string }): void {
-  const queue = pendingByJid.get(jid) ?? []
-  queue.push({ rsvpId: meta.rsvpId, at: Date.now() })
-  pendingByJid.set(jid, queue)
-  const now = Date.now()
-  const fresh = queue.filter((entry) => now - entry.at < 5 * 60 * 1000)
-  pendingByJid.set(jid, fresh)
+interface PendingEntry {
+  jid: string
+  rsvpId?: string
+  at: number
 }
 
-function shiftMatched(jid: string): { rsvpId?: string } {
-  const queue = pendingByJid.get(jid)
-  if (!queue || queue.length === 0) return {}
-  const [first] = queue.splice(0, 1)
-  if (queue.length === 0) pendingByJid.delete(jid)
-  return first ?? {}
+/** Mensajes en PENDING esperando el ACK de WhatsApp, indexados por messageId */
+const pendingByMsg = new Map<string, PendingEntry>()
+
+/**
+ * Mensajes que el watchdog marcó como "sin entrega": se retienen un tiempo
+ * extra para capturar ACKs tardíos (WhatsApp puede entregar después de un rato).
+ */
+const lateByMsg = new Map<string, PendingEntry>()
+
+const PENDING_TIMEOUT_MS = 90 * 1000
+const LATE_KEEP_MS = 30 * 60 * 1000
+
+function trackPending(messageId: string, jid: string, meta: { rsvpId?: string }): void {
+  pendingByMsg.set(messageId, { jid, rsvpId: meta.rsvpId, at: Date.now() })
+}
+
+function consumePending(messageId?: string | null): PendingEntry | undefined {
+  if (!messageId) return undefined
+  return pendingByMsg.get(messageId) ?? lateByMsg.get(messageId)
+}
+
+function settleMessage(messageId?: string | null): void {
+  if (!messageId) return
+  pendingByMsg.delete(messageId)
+  lateByMsg.delete(messageId)
+}
+
+/** Vigila mensajes que se quedan en PENDING: WhatsApp no los está entregando. */
+function startPendingWatchdog(): void {
+  setInterval(
+    () => {
+      const now = Date.now()
+      for (const [messageId, entry] of pendingByMsg) {
+        if (now - entry.at < PENDING_TIMEOUT_MS) continue
+        console.warn(
+          `[whatsapp] sin entrega → ${entry.jid}${entry.rsvpId ? ` (rsvp ${entry.rsvpId})` : ''} · el número puede no tener WhatsApp, estar apagado o bloquear mensajes`,
+        )
+        if (entry.rsvpId) {
+          void Rsvp.updateOne({ _id: entry.rsvpId }, { $set: { estado: 'no-entregado' } })
+        }
+        lateByMsg.set(messageId, { ...entry })
+        pendingByMsg.delete(messageId)
+      }
+      for (const [messageId, entry] of lateByMsg) {
+        if (now - entry.at > LATE_KEEP_MS) lateByMsg.delete(messageId)
+      }
+    },
+    30 * 1000,
+  ).unref()
 }
 
 const STATUS_LABELS: Record<number, string> = {
@@ -97,31 +136,42 @@ export async function startWhatsApp(): Promise<void> {
   })
   socket = nextSocket
 
+  if (!watchdogStarted) {
+    watchdogStarted = true
+    startPendingWatchdog()
+  }
+
   nextSocket.ev.on('creds.update', () => {
     void saveCreds()
   })
 
   nextSocket.ev.on('messages.update', async (updates) => {
     for (const update of updates) {
+      const messageId = update.key?.id
       const jid = update.key?.remoteJid ?? ''
-      const status = update.update?.status
-      const { rsvpId } = shiftMatched(jid)
-      const label = describeStatus(status)
-      if (status === proto.WebMessageInfo.Status.ERROR) {
+      const msgStatus = update.update?.status
+      const entry = consumePending(messageId)
+      const label = describeStatus(msgStatus)
+      if (msgStatus === proto.WebMessageInfo.Status.ERROR) {
         console.error(
-          `[whatsapp] entrega ERROR → ${jid}${rsvpId ? ` (rsvp ${rsvpId})` : ''}`,
+          `[whatsapp] entrega ERROR → ${jid}${entry?.rsvpId ? ` (rsvp ${entry.rsvpId})` : ''}`,
         )
-        if (rsvpId) await Rsvp.updateOne({ _id: rsvpId }, { $set: { estado: 'error' } })
+        if (entry?.rsvpId) await Rsvp.updateOne({ _id: entry.rsvpId }, { $set: { estado: 'error' } })
+        settleMessage(messageId)
         continue
       }
       if (
-        status === proto.WebMessageInfo.Status.DELIVERY_ACK ||
-        status === proto.WebMessageInfo.Status.READ
+        msgStatus === proto.WebMessageInfo.Status.SERVER_ACK ||
+        msgStatus === proto.WebMessageInfo.Status.DELIVERY_ACK ||
+        msgStatus === proto.WebMessageInfo.Status.READ
       ) {
+        const estado =
+          msgStatus === proto.WebMessageInfo.Status.SERVER_ACK ? 'entregado-servidor' : 'entregado'
         console.log(
-          `[whatsapp] entregado ✓ → ${jid}${rsvpId ? ` (rsvp ${rsvpId})` : ''} · ${label}`,
+          `[whatsapp] ${label} → ${jid}${entry?.rsvpId ? ` (rsvp ${entry.rsvpId})` : ''}`,
         )
-        if (rsvpId) await Rsvp.updateOne({ _id: rsvpId }, { $set: { estado: 'entregado' } })
+        if (entry?.rsvpId) await Rsvp.updateOne({ _id: entry.rsvpId }, { $set: { estado } })
+        settleMessage(messageId)
       }
     }
   })
@@ -193,15 +243,17 @@ export async function sendMessage(
   toNumber: string,
   text: string,
   meta?: { rsvpId?: string },
-): Promise<void> {
+): Promise<{ messageId?: string }> {
   if (!socket || status.state !== 'ready') {
     throw new Error('WhatsApp no conectado')
   }
   const jid = toNumber.includes('@') ? toNumber : `${repairPhone(toNumber)}@s.whatsapp.net`
   console.log(`[whatsapp] enviando → ${jid}`)
-  if (meta?.rsvpId) trackPending(jid, { rsvpId: meta.rsvpId })
-  await socket.sendMessage(jid, { text })
+  const info = await socket.sendMessage(jid, { text })
+  const messageId = info?.key?.id ?? undefined
+  if (messageId) trackPending(messageId, jid, meta ?? {})
   await Rsvp.updateOne({ _id: meta?.rsvpId }, { $set: { estado: 'enviado' } })
+  return { messageId }
 }
 
 export async function logoutWhatsApp(): Promise<void> {

@@ -332,7 +332,7 @@
               .map((r) => {
                 const fecha = new Date(r.fecha).toLocaleString('es-MX', { day: '2-digit', month: 'short' })
                 const estado = r.estado || (r.enviado ? 'enviado' : 'pendiente')
-                const chip = { pendiente: ['no', 'Pendiente'], enviado: ['yes', 'Enviado'], entregado: ['yes', 'Entregado'], error: ['no', 'Error'] }[estado] || ['no', estado]
+                const chip = { pendiente: ['no', 'Pendiente'], 'no-entregado': ['no', 'Sin entrega'], enviado: ['yes', 'Enviado'], 'entregado-servidor': ['yes', 'Recibido en WhatsApp'], entregado: ['yes', 'Entregado'], error: ['no', 'Error'] }[estado] || ['no', estado]
                 return `<tr>
                   <td><strong>${escapeHtml(r.nombre)}</strong></td>
                   <td>${escapeHtml(r.telefono)}</td>

@@ -20,12 +20,16 @@ confirmaciones en MongoDB y envía el WhatsApp de confirmación.
   en el número de destino (ej. `2221234567` → `5212221234567`). El server lo
   aplica automáticamente (`MOBILE_PREFIX` en el entorno, default `1`).
 - **Entrega real ≠ "enviado"**: Baileys marca el envío apenas escribe al socket.
-  El server ahora escucha `messages.update` y registra el estado real
-  (`enviado` → `entregado` / `error`) en los logs de Render y en el panel `/admin`.
-- **Antispam**: WhatsApp puede descartar silenciosamente mensajes hacia números
-  que no te tienen agregado como contacto (sobre todo en líneas nuevas).
-  Recomendación: guarda el número del invitado en el teléfono vinculado o
-  márcalo/escópele un mensaje manual antes de los envíos masivos.
+  El server escucha `messages.update` y registra el estado real:
+  `enviado` → `entregado-servidor` (ACK del servidor) → `entregado` (llegó al
+  teléfono) / `error`, y un watchdog marca `no-entregado` si una confirmación
+  lleva > 90 s en "Esperando el mensaje" (el número invitado puede no tener
+  WhatsApp, estar apagado o estar bloqueado). Ver panel `/admin` y logs de Render.
+- **Entrega al instante**: si en la app de WhatsApp la línea vinculada muestra
+  "Esperando el mensaje" y nunca entrega, el problema no es el código: el
+  teléfono vinculado debe estar **en línea** y el número del invitado debe
+  existir en WhatsApp. Guárdalo como contacto o escríbele una vez desde la
+  línea vinculada para evitar que WhatsApp lo ponga en cola (antispam).
 - **Prueba**: usa el campo "Probar envío de WhatsApp" del panel `/admin` y
   revisa en Render: `[whatsapp] enviando → 5212221234567@s.whatsapp.net` y
   luego `entregado ✓`.
