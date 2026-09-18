@@ -48,3 +48,23 @@ export function repairPhone(raw: string): string {
   }
   return digits
 }
+
+/**
+ * Variantes de un número a probar contra WhatsApp: con y sin el dígito móvil
+ * (México acepta `521XXXXXXXXXX` y `52XXXXXXXXXX`). Ayuda a detectar bajo qué
+ * formato está registrado el número realmente.
+ */
+export function phoneVariants(raw: string): string[] {
+  const digits = repairPhone(raw)
+  const variants = [digits]
+  const cc = config.defaultCountryCode
+  const mp = config.mobilePrefix
+  if (mp && cc) {
+    if (digits.length === cc.length + mp.length + 10 && digits.startsWith(cc + mp)) {
+      variants.push(cc + digits.slice(cc.length + mp.length))
+    } else if (digits.length === cc.length + 10 && digits.startsWith(cc)) {
+      variants.push(cc + mp + digits.slice(cc.length))
+    }
+  }
+  return [...new Set(variants)]
+}

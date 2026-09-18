@@ -260,3 +260,22 @@ export async function logoutWhatsApp(): Promise<void> {
   if (!socket) throw new Error('WhatsApp no conectado')
   await socket.logout()
 }
+
+export interface WhatsAppLookup {
+  jid: string
+  phone: string
+}
+
+/**
+ * Verifica (solo lectura) si los números dados están registrados en WhatsApp.
+ * Devuelve únicamente los que existen, con su JID real — útil para detectar
+ * si el número es válido y bajo qué formato (52 vs 521 en México).
+ */
+export async function checkWhatsAppNumbers(numbers: string[]): Promise<WhatsAppLookup[]> {
+  if (!socket || status.state !== 'ready') {
+    throw new Error('WhatsApp no conectado')
+  }
+  const unique = [...new Set(numbers)]
+  const results = await socket.onWhatsApp(...unique)
+  return (results ?? []).map(({ jid }) => ({ jid, phone: jid.split('@')[0] ?? '' }))
+}

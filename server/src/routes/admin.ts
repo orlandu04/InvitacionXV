@@ -3,8 +3,8 @@ import { config } from '../config'
 import { Rsvp } from '../db/models/Rsvp'
 import { requireAdmin, ADMIN_COOKIE } from '../middleware/auth'
 import { getRsvpTemplate, renderTemplate, setRsvpTemplate, MESSAGE_PLACEHOLDERS } from '../settings'
-import { normalizePhone } from '../utils/phone'
-import { getStatus, logoutWhatsApp, sendMessage } from '../whatsapp/client'
+import { normalizePhone, phoneVariants } from '../utils/phone'
+import { checkWhatsAppNumbers, getStatus, logoutWhatsApp, sendMessage } from '../whatsapp/client'
 import { onEvent } from '../whatsapp/events'
 
 export const adminRouter = Router()
@@ -71,6 +71,35 @@ adminRouter.post('/whatsapp/logout', requireAdmin, async (_req, res) => {
   }
 })
 
+/* ── Verificación de número (¿existe en WhatsApp?) ────────── */
+
+adminRouter.post('/whatsapp/check', requireAdmin, async (req, res) => {
+  const { telefono } = (req.body ?? {}) as { telefono?: unknown }
+  if (typeof telefono !== 'string' || !telefono.trim()) {
+    res.status(400).json({ error: 'Escribe un número de celular' })
+    return
+  }
+  const parsed = normalizePhone(telefono)
+  if (!parsed.ok) {
+    res.status(400).json({ error: parsed.error })
+    return
+  }
+  const variants = phoneVariants(parsed.phone)
+  try {
+    const found = await checkWhatsAppNumbers(variants)
+    const jids = found.map((entry) => entry.jid)
+    res.json({
+      ok: true,
+      phone: parsed.phone,
+      variants,
+      encontrado: found.length > 0,
+      jids,
+    })
+  } catch (error) {
+    res.status(502).json({ error: error instanceof Error ? error.message : 'WhatsApp no conectado' })
+  }
+})
+
 /* ── Prueba de envío WhatsApp ─────────────────────────────── */
 
 adminRouter.post('/whatsapp/test', requireAdmin, async (req, res) => {
@@ -84,6 +113,20 @@ adminRouter.post('/whatsapp/test', requireAdmin, async (req, res) => {
     res.status(400).json({ error: parsed.error })
     return
   }
+  const variants = phoneVariants(parsed.phone)
+  let verificacion: string
+  try {
+    const found = await checkWhatsAppNumbers(variants)
+    if (found.length === 0) {
+      res.status(422).json({
+        error: `El número ${parsed.phone} no existe en WhatsApp (verificado). Revisa que el número sea correcto y que tenga WhatsApp activo.`,
+      })
+      return
+    }
+    verificacion = found.map((entry) => entry.jid).join(', ')
+  } catch (error) {
+    verificacion = `(no se pudo verificar: ${error instanceof Error ? error.message : 'error'})`
+  }
   const mensaje = await buildMessage('Mensaje de prueba')
   try {
     const { messageId } = await sendMessage(parsed.phone, mensaje)
@@ -92,7 +135,8 @@ adminRouter.post('/whatsapp/test', requireAdmin, async (req, res) => {
       ok: true,
       jid,
       messageId,
-      mensaje: `Salió de la sesión a ${jid}. "Enviado" solo significa que se escribió en WhatsApp; revisa en la app si llega (puede quedar en "Esperando el mensaje" si el teléfono no tiene WhatsApp o está apagado).`,
+      verificacion,
+      mensaje: `Registrado en WhatsApp: ${verificacion || 'comprobado'}. Mensaje salió a ${jid}. "Enviado" solo significa que se escribió; revisa si llega (antispam/sin contacto guardado puede ocultarlo).`,
     })
   } catch (error) {
     res.status(502).json({ error: error instanceof Error ? error.message : 'WhatsApp no conectado' })
