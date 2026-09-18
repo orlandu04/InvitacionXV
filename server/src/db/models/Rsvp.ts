@@ -1,11 +1,17 @@
 import { model, Schema } from 'mongoose'
 
+export type RsvpStatus = 'confirmado' | 'pendiente' | 'enviado' | 'entregado' | 'fallido'
+
 export interface RsvpDoc {
   nombre: string
   telefono: string
   mensaje: string
   enviado: boolean
-  estado?: 'pendiente' | 'enviado' | 'entregado' | 'error'
+  status: RsvpStatus
+  whatsappCheckedAt?: Date
+  whatsappJid?: string
+  lastError?: string
+  retryCount: number
   createdAt: Date
 }
 
@@ -15,11 +21,15 @@ const rsvpSchema = new Schema<RsvpDoc>(
     telefono: { type: String, required: true, trim: true },
     mensaje: { type: String, default: '' },
     enviado: { type: Boolean, default: false },
-    estado: {
+    status: {
       type: String,
-      enum: ['pendiente', 'enviado', 'entregado', 'error'],
-      default: 'pendiente',
+      enum: ['confirmado', 'pendiente', 'enviado', 'entregado', 'fallido'],
+      default: 'confirmado',
     },
+    whatsappCheckedAt: { type: Date },
+    whatsappJid: { type: String },
+    lastError: { type: String },
+    retryCount: { type: Number, default: 0 },
   },
   { timestamps: { createdAt: true, updatedAt: false } },
 )

@@ -2,21 +2,12 @@ import { Router } from 'express'
 import { config } from '../config'
 import { Rsvp } from '../db/models/Rsvp'
 import { requireAdmin, ADMIN_COOKIE } from '../middleware/auth'
-import { getRsvpTemplate, renderTemplate, setRsvpTemplate, MESSAGE_PLACEHOLDERS } from '../settings'
+import { buildRsvpMessage, getRsvpTemplate, setRsvpTemplate, MESSAGE_PLACEHOLDERS } from '../settings'
 import { normalizePhone, phoneVariants } from '../utils/phone'
-import { checkWhatsAppNumbers, getStatus, logoutWhatsApp, sendMessage } from '../whatsapp/client'
+import { checkWhatsAppNumbers, getStatus, isSocketOpen, logoutWhatsApp, sendMessage } from '../whatsapp/client'
 import { onEvent } from '../whatsapp/events'
 
 export const adminRouter = Router()
-
-async function buildMessage(nombre: string): Promise<string> {
-  const template = await getRsvpTemplate()
-  return renderTemplate(template, {
-    nombre,
-    quinceanera: config.quinceanera,
-    fecha: config.eventDate,
-  })
-}
 
 /* ── Autenticación del panel ─────────────────────────────── */
 
@@ -127,7 +118,11 @@ adminRouter.post('/whatsapp/test', requireAdmin, async (req, res) => {
   } catch (error) {
     verificacion = `(no se pudo verificar: ${error instanceof Error ? error.message : 'error'})`
   }
-  const mensaje = await buildMessage('Mensaje de prueba')
+  const mensaje = await buildRsvpMessage('Mensaje de prueba')
+  if (!isSocketOpen()) {
+    res.status(502).json({ error: 'El socket de WhatsApp no está abierto (¿cerraste sesión o expiró el QR?).' })
+    return
+  }
   try {
     const { messageId } = await sendMessage(parsed.phone, mensaje)
     const jid = `${parsed.phone}@s.whatsapp.net`
@@ -170,7 +165,9 @@ adminRouter.get('/rsvps', requireAdmin, async (_req, res) => {
       telefono: doc.telefono,
       mensaje: doc.mensaje,
       enviado: doc.enviado,
-      estado: doc.estado,
+      status: doc.status,
+      whatsappJid: doc.whatsappJid,
+      lastError: doc.lastError,
       fecha: doc.createdAt,
     })),
   })
@@ -183,23 +180,38 @@ adminRouter.post('/rsvps/:id/resend', requireAdmin, async (req, res) => {
     return
   }
   try {
-    const mensaje = await buildMessage(doc.nombre)
-    await sendMessage(doc.telefono, mensaje, { rsvpId: doc.id })
-    await doc.updateOne({ $set: { mensaje, enviado: true, estado: 'enviado' } })
+    if (!isSocketOpen()) {
+      res.status(502).json({ error: 'El socket de WhatsApp no está abierto.' })
+      return
+    }
+    const mensaje = await buildRsvpMessage(doc.nombre)
+    const jid = doc.whatsappJid || doc.telefono
+    await sendMessage(jid, mensaje, { rsvpId: doc.id })
+    await doc.updateOne({ $set: { mensaje, enviado: true, status: 'enviado', lastError: null } })
     res.json({ ok: true, mensaje })
-  } catch {
-    res.status(502).json({ error: 'WhatsApp no conectado, intenta más tarde' })
+  } catch (error) {
+    res.status(502).json({
+      error: error instanceof Error ? error.message : 'WhatsApp no conectado, intenta más tarde',
+    })
   }
 })
 
 adminRouter.post('/rsvps/broadcast', requireAdmin, async (_req, res) => {
+  if (!isSocketOpen()) {
+    res.status(502).json({ error: 'El socket de WhatsApp no está abierto.' })
+    return
+  }
   const docs = await Rsvp.find().lean()
   const rows = { enviados: 0, pendientes: 0, errores: [] as string[] }
   for (const doc of docs) {
     try {
-      const mensaje = await buildMessage(doc.nombre)
-      await sendMessage(doc.telefono, mensaje, { rsvpId: String(doc._id) })
-      await Rsvp.updateOne({ _id: doc._id }, { $set: { mensaje, enviado: true, estado: 'enviado' } })
+      const mensaje = await buildRsvpMessage(doc.nombre)
+      const jid = doc.whatsappJid || doc.telefono
+      await sendMessage(jid, mensaje, { rsvpId: String(doc._id) })
+      await Rsvp.updateOne(
+        { _id: doc._id },
+        { $set: { mensaje, enviado: true, status: 'enviado', lastError: null } },
+      )
       rows.enviados += 1
     } catch {
       rows.pendientes += 1

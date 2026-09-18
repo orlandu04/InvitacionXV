@@ -51,20 +51,43 @@ export function repairPhone(raw: string): string {
 
 /**
  * Variantes de un número a probar contra WhatsApp: con y sin el dígito móvil
- * (México acepta `521XXXXXXXXXX` y `52XXXXXXXXXX`). Ayuda a detectar bajo qué
- * formato está registrado el número realmente.
+ * (México acepta `521XXXXXXXXXX` y `52XXXXXXXXXX`), y en las formas `+`,
+ * `@s.whatsapp.net` y ambas. Se manda TODO en un solo `onWhatsApp()` para
+ * evitar rate-limit y resolver bajo qué JID está registrado el número.
  */
 export function phoneVariants(raw: string): string[] {
-  const digits = repairPhone(raw)
-  const variants = [digits]
+  const digits = raw.replace(/\D/g, '')
+  const digitsVariants = new Set<string>([digits])
   const cc = config.defaultCountryCode
   const mp = config.mobilePrefix
   if (mp && cc) {
     if (digits.length === cc.length + mp.length + 10 && digits.startsWith(cc + mp)) {
-      variants.push(cc + digits.slice(cc.length + mp.length))
+      digitsVariants.add(cc + digits.slice(cc.length + mp.length))
     } else if (digits.length === cc.length + 10 && digits.startsWith(cc)) {
-      variants.push(cc + mp + digits.slice(cc.length))
+      digitsVariants.add(cc + mp + digits.slice(cc.length))
     }
   }
-  return [...new Set(variants)]
+  const variants = new Set<string>()
+  for (const value of digitsVariants) {
+    variants.add(value)
+    variants.add(`+${value}`)
+    variants.add(`${value}@s.whatsapp.net`)
+    variants.add(`+${value}@s.whatsapp.net`)
+  }
+  return [...variants]
+}
+
+/**
+ * JID "más probable" para el envío best-effort cuando la verificación
+ * `onWhatsApp` falla por red/socket (sin el `1` móvil, que es el formato
+ * moderno que WhatsApp suele devolver como JID real en México).
+ */
+export function likelyWhatsAppJid(raw: string): string {
+  const digits = repairPhone(raw)
+  const cc = config.defaultCountryCode
+  const mp = config.mobilePrefix
+  if (mp && cc && digits.length === cc.length + mp.length + 10 && digits.startsWith(cc + mp)) {
+    return `${cc}${digits.slice(cc.length + mp.length)}@s.whatsapp.net`
+  }
+  return `${digits}@s.whatsapp.net`
 }

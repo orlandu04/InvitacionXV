@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { CheckCircle2, Loader2, MessageCircleHeart, Phone, User } from 'lucide-react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 import { Sparkles } from '../components/effects/Sparkles'
 import { invitation } from '../config/invitation'
@@ -28,25 +28,31 @@ export function Rsvp(): React.JSX.Element {
   const [telefono, setTelefono] = useState('')
   const [estado, setEstado] = useState<Estado>('idle')
   const [feedback, setFeedback] = useState('')
+  const [pendiente, setPendiente] = useState(false)
+  const submittedRef = useRef(false)
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault()
+    if (submittedRef.current) return
     if (!nombre.trim() || !telefono.trim()) {
       setEstado('error')
       setFeedback('Completa tu nombre y tu número de celular para confirmar.')
       return
     }
+    submittedRef.current = true
     setEstado('enviando')
     setFeedback('')
     try {
       const res = await submitRsvp(nombre.trim(), telefono.trim())
       setEstado('ok')
+      setPendiente(res.whatsapp === 'pendiente')
       setFeedback(
         res.whatsapp === 'pendiente'
-          ? '¡Gracias! Recibimos tu confirmación, en breve te la confirmamos por WhatsApp.'
+          ? `¡Gracias, ${nombre.trim().split(' ')[0]}! Registramos tu confirmación. No pudimos dejar el mensaje en tu WhatsApp, así que te contactaremos por este medio.`
           : `¡Gracias, ${nombre.trim().split(' ')[0]}! Recibimos tu confirmación y te enviamos un WhatsApp con los detalles.`,
       )
     } catch (error) {
+      submittedRef.current = false
       setEstado('error')
       setFeedback(error instanceof Error ? error.message : 'No pudimos registrar tu confirmación.')
     }
@@ -147,7 +153,7 @@ export function Rsvp(): React.JSX.Element {
 
             <button
               type="submit"
-              disabled={estado === 'enviando'}
+              disabled={estado === 'enviando' || estado === 'ok'}
               className="group relative inline-flex items-center justify-center gap-3 overflow-hidden rounded-full bg-gradient-to-r from-champagne via-gold to-champagne px-9 py-4 font-body text-[0.68rem] font-semibold uppercase tracking-[0.32em] text-ink shadow-[0_0_28px_rgba(212,175,55,0.38)] transition-shadow duration-500 select-none hover:shadow-[0_0_44px_rgba(212,175,55,0.6)] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {estado === 'enviando' ? (
@@ -164,15 +170,29 @@ export function Rsvp(): React.JSX.Element {
             </button>
 
             {estado === 'ok' && (
-              <motion.p
+              <motion.div
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center justify-center gap-2 font-display text-sm text-rose-deep"
                 role="status"
+                className="font-display text-sm text-rose-deep"
               >
-                <CheckCircle2 size={17} strokeWidth={1.6} aria-hidden />
-                {feedback}
-              </motion.p>
+                <p className="flex items-center justify-center gap-2">
+                  <CheckCircle2 size={17} strokeWidth={1.6} aria-hidden />
+                  {feedback}
+                </p>
+                {pendiente && (
+                  <p className="mt-2">
+                    <a
+                      href={RSVP_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline decoration-gold/60 underline-offset-4 hover:text-gold-deep"
+                    >
+                      Si te urge, háblanos por WhatsApp →
+                    </a>
+                  </p>
+                )}
+              </motion.div>
             )}
 
             {estado === 'error' && (

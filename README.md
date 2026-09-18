@@ -19,12 +19,23 @@ confirmaciones en MongoDB y envía el WhatsApp de confirmación.
 - **Formato**: para celulares de México, WhatsApp exige el `1` después del `52`
   en el número de destino (ej. `2221234567` → `5212221234567`). El server lo
   aplica automáticamente (`MOBILE_PREFIX` en el entorno, default `1`).
+- **Flujo de confirmación (RSVP)**: la confirmación se **persiste en Mongo
+  primero** y jamás se pierde. El server verifica con `onWhatsApp` que el número
+  exista (una sola llamada con todas las variantes `521`/`52`/`+`/`@s.whatsapp.net`)
+  y encola el envío con retraso 3-10 s y reintentos:
+  `confirmado` → `enviado` (encolado) → `entregado` (ACK del teléfono) / `fallido`.
+  Si el socket de Baileys no está abierto o el número no existe, queda `pendiente`
+  con su `lastError` (`socket_down`, `not_on_whatsapp`, `send_failed`, …) y un
+  reaper cada 60 s lo reintenta (re-verifica y envía si ya existe; agota intentos → `fallido`).
+- **Mensajes variados**: mientras la plantilla siga siendo la de fábrica se rota
+  entre las variantes de `VARIANT_TEMPLATES` (evita ban por mensajes idénticos);
+  en cuanto el admin guarda su propio texto en `/admin`, se usa tal cual sin variar.
 - **Entrega real ≠ "enviado"**: Baileys marca el envío apenas escribe al socket.
-  El server escucha `messages.update` y registra el estado real:
-  `enviado` → `entregado-servidor` (ACK del servidor) → `entregado` (llegó al
-  teléfono) / `error`, y un watchdog marca `no-entregado` si una confirmación
-  lleva > 90 s en "Esperando el mensaje" (el número invitado puede no tener
-  WhatsApp, estar apagado o estar bloqueado). Ver panel `/admin` y logs de Render.
+  El server escucha `messages.update` y registra el estado real (`entregado`).
+  Un watchdog marca `fallido` si un mensaje lleva > 90 s en cola (el número
+  invitado puede no tener WhatsApp, estar apagado o bloquear mensajes).
+  Ver panel `/admin` (chips Confirmado/Pendiente/Enviado/Entregado/Fallido +
+  `lastError`) y logs de Render.
 - **Entrega al instante**: si en la app de WhatsApp la línea vinculada muestra
   "Esperando el mensaje" y nunca entrega, el problema no es el código: el
   teléfono vinculado debe estar **en línea** y el número del invitado debe

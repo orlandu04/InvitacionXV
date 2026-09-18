@@ -13,6 +13,7 @@ import { Rsvp } from '../db/models/Rsvp'
 import { repairPhone } from '../utils/phone'
 import { clearMongoAuth, useMongoAuthState } from './auth-state'
 import { emitEvent } from './events'
+import { startRetrySweep } from './queue'
 
 export interface ConnectionStatus {
   state: 'connecting' | 'qr' | 'ready' | 'closed' | 'logged_out'
@@ -70,7 +71,10 @@ function startPendingWatchdog(): void {
           `[whatsapp] sin entrega → ${entry.jid}${entry.rsvpId ? ` (rsvp ${entry.rsvpId})` : ''} · el número puede no tener WhatsApp, estar apagado o bloquear mensajes`,
         )
         if (entry.rsvpId) {
-          void Rsvp.updateOne({ _id: entry.rsvpId }, { $set: { estado: 'no-entregado' } })
+          void Rsvp.updateOne(
+            { _id: entry.rsvpId },
+            { $set: { status: 'fallido', lastError: 'no_delivery' } },
+          )
         }
         lateByMsg.set(messageId, { ...entry })
         pendingByMsg.delete(messageId)
@@ -103,6 +107,17 @@ export function getStatus(): ConnectionStatus {
 
 export function isReady(): boolean {
   return status.state === 'ready' && socket !== null
+}
+
+/**
+ * Verifica que el socket de Baileys esté realmente ABIERTO (readyState 1),
+ * no solo que la sesión se haya marcado como ready. Evita "confirmar" a un
+ * invitado cuando el QR se desconectó.
+ */
+export function isSocketOpen(): boolean {
+  if (status.state !== 'ready' || socket === null) return false
+  const ws = socket.ws as { readyState?: number } | undefined
+  return ws?.readyState === 1 /* WebSocket.OPEN */
 }
 
 function setStatus(next: ConnectionStatus): void {
@@ -139,6 +154,7 @@ export async function startWhatsApp(): Promise<void> {
   if (!watchdogStarted) {
     watchdogStarted = true
     startPendingWatchdog()
+    startRetrySweep()
   }
 
   nextSocket.ev.on('creds.update', () => {
@@ -156,7 +172,12 @@ export async function startWhatsApp(): Promise<void> {
         console.error(
           `[whatsapp] entrega ERROR → ${jid}${entry?.rsvpId ? ` (rsvp ${entry.rsvpId})` : ''}`,
         )
-        if (entry?.rsvpId) await Rsvp.updateOne({ _id: entry.rsvpId }, { $set: { estado: 'error' } })
+        if (entry?.rsvpId) {
+          await Rsvp.updateOne(
+            { _id: entry.rsvpId },
+            { $set: { status: 'fallido', lastError: 'whatsapp_error' } },
+          )
+        }
         settleMessage(messageId)
         continue
       }
@@ -165,12 +186,12 @@ export async function startWhatsApp(): Promise<void> {
         msgStatus === proto.WebMessageInfo.Status.DELIVERY_ACK ||
         msgStatus === proto.WebMessageInfo.Status.READ
       ) {
-        const estado =
-          msgStatus === proto.WebMessageInfo.Status.SERVER_ACK ? 'entregado-servidor' : 'entregado'
         console.log(
           `[whatsapp] ${label} → ${jid}${entry?.rsvpId ? ` (rsvp ${entry.rsvpId})` : ''}`,
         )
-        if (entry?.rsvpId) await Rsvp.updateOne({ _id: entry.rsvpId }, { $set: { estado } })
+        if (entry?.rsvpId) {
+          await Rsvp.updateOne({ _id: entry.rsvpId }, { $set: { status: 'entregado' } })
+        }
         settleMessage(messageId)
       }
     }
@@ -252,7 +273,7 @@ export async function sendMessage(
   const info = await socket.sendMessage(jid, { text })
   const messageId = info?.key?.id ?? undefined
   if (messageId) trackPending(messageId, jid, meta ?? {})
-  await Rsvp.updateOne({ _id: meta?.rsvpId }, { $set: { estado: 'enviado' } })
+  await Rsvp.updateOne({ _id: meta?.rsvpId }, { $set: { status: 'enviado', lastError: null } })
   return { messageId }
 }
 

@@ -85,6 +85,7 @@
       .chip { font-size: 0.68rem; padding: 3px 10px; border-radius: 999px; font-weight: 600; }
       .chip.yes { background: #e5f6ea; color: #1f7a3d; }
       .chip.no { background: #fdf3d9; color: #8a6200; }
+      .tiny { font-size: 0.62rem; color: #a00; margin-top: 2px; }
       .actions { display: flex; gap: 6px; }
       .actions button { font-size: 0.62rem; padding: 7px 12px; }
       .empty { color: var(--muted); font-size: 0.85rem; text-align: center; padding: 22px 0; }
@@ -312,7 +313,7 @@
         say('testMsg', 'Enviando…', '')
         try {
           const r = await api('/admin/whatsapp/test', { method: 'POST', body: JSON.stringify({ telefono }) })
-          say('testMsg', r.mensaje + '. Revisa los logs de Render para el estado de entrega (enviado/entregado).', 'ok')
+          say('testMsg', r.mensaje + '. Revisa los logs de Render para el estado de entrega (enviado/entregado/fallido).', 'ok')
         } catch (e) {
           say('testMsg', e.message, 'err')
         }
@@ -347,13 +348,20 @@
             rows
               .map((r) => {
                 const fecha = new Date(r.fecha).toLocaleString('es-MX', { day: '2-digit', month: 'short' })
-                const estado = r.estado || (r.enviado ? 'enviado' : 'pendiente')
-                const chip = { pendiente: ['no', 'Pendiente'], 'no-entregado': ['no', 'Sin entrega'], enviado: ['yes', 'Enviado'], 'entregado-servidor': ['yes', 'Recibido en WhatsApp'], entregado: ['yes', 'Entregado'], error: ['no', 'Error'] }[estado] || ['no', estado]
+                const status = r.status || (r.enviado ? 'enviado' : 'pendiente')
+                const chip = {
+                  confirmado: ['yes', 'Confirmado'],
+                  pendiente: ['no', 'Pendiente'],
+                  enviado: ['yes', 'Enviado'],
+                  entregado: ['yes', 'Entregado'],
+                  fallido: ['no', 'Fallido'],
+                }[status] || ['no', status]
+                const err = r.lastError ? `<div class="tiny">${escapeHtml(r.lastError)}</div>` : ''
                 return `<tr>
                   <td><strong>${escapeHtml(r.nombre)}</strong></td>
                   <td>${escapeHtml(r.telefono)}</td>
                   <td>${fecha}</td>
-                  <td><span class="chip ${chip[0]}">${chip[1]}</span></td>
+                  <td><span class="chip ${chip[0]}" title="${escapeHtml(r.whatsappJid || '')}">${chip[1]}</span>${err}</td>
                   <td><div class="actions">
                     <button data-resend="${r.id}" class="ghost" type="button">Reenviar</button>
                     <button data-del="${r.id}" class="ghost" type="button">Borrar</button>
