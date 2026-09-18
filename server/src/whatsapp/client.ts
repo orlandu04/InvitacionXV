@@ -110,14 +110,11 @@ export function isReady(): boolean {
 }
 
 /**
- * Verifica que el socket de Baileys esté realmente ABIERTO (readyState 1),
- * no solo que la sesión se haya marcado como ready. Evita "confirmar" a un
- * invitado cuando el QR se desconectó.
+ * Verifica que el socket de Baileys esté realmente ABIERTO. En Baileys v6 el
+ * socket `ws` es un WebSocketClient con getter `isOpen` (no expone `readyState`).
  */
 export function isSocketOpen(): boolean {
-  if (status.state !== 'ready' || socket === null) return false
-  const ws = socket.ws as { readyState?: number } | undefined
-  return ws?.readyState === 1 /* WebSocket.OPEN */
+  return status.state === 'ready' && socket !== null && socket.ws.isOpen
 }
 
 function setStatus(next: ConnectionStatus): void {

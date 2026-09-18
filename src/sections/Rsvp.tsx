@@ -28,7 +28,6 @@ export function Rsvp(): React.JSX.Element {
   const [telefono, setTelefono] = useState('')
   const [estado, setEstado] = useState<Estado>('idle')
   const [feedback, setFeedback] = useState('')
-  const [pendiente, setPendiente] = useState(false)
   const submittedRef = useRef(false)
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>): Promise<void> => {
@@ -45,10 +44,9 @@ export function Rsvp(): React.JSX.Element {
     try {
       const res = await submitRsvp(nombre.trim(), telefono.trim())
       setEstado('ok')
-      setPendiente(res.whatsapp === 'pendiente')
       setFeedback(
         res.whatsapp === 'pendiente'
-          ? `¡Gracias, ${nombre.trim().split(' ')[0]}! Registramos tu confirmación. No pudimos dejar el mensaje en tu WhatsApp, así que te contactaremos por este medio.`
+          ? `¡Gracias, ${nombre.trim().split(' ')[0]}! Registramos tu confirmación; te la confirmaremos por WhatsApp en breve.`
           : `¡Gracias, ${nombre.trim().split(' ')[0]}! Recibimos tu confirmación y te enviamos un WhatsApp con los detalles.`,
       )
     } catch (error) {
@@ -170,29 +168,15 @@ export function Rsvp(): React.JSX.Element {
             </button>
 
             {estado === 'ok' && (
-              <motion.div
+              <motion.p
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
+                className="flex items-center justify-center gap-2 font-display text-sm text-rose-deep"
                 role="status"
-                className="font-display text-sm text-rose-deep"
               >
-                <p className="flex items-center justify-center gap-2">
-                  <CheckCircle2 size={17} strokeWidth={1.6} aria-hidden />
-                  {feedback}
-                </p>
-                {pendiente && (
-                  <p className="mt-2">
-                    <a
-                      href={RSVP_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="underline decoration-gold/60 underline-offset-4 hover:text-gold-deep"
-                    >
-                      Si te urge, háblanos por WhatsApp →
-                    </a>
-                  </p>
-                )}
-              </motion.div>
+                <CheckCircle2 size={17} strokeWidth={1.6} aria-hidden />
+                {feedback}
+              </motion.p>
             )}
 
             {estado === 'error' && (
