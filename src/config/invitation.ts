@@ -85,8 +85,7 @@ export const invitation = {
   dressCode: {
     heading: 'Vestimenta',
     value: 'Formal',
-    note: 'Elegancia en rosa & dorado',
-    suggestedColors: ['#FBCFE8', '#EC4899', '#BE185D', '#D4AF37', '#FFF7ED'],
+    note: 'Evita el color rosa',
   },
 
   location: {

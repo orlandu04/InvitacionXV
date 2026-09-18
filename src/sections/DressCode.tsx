@@ -59,18 +59,6 @@ export function DressCode(): React.JSX.Element {
           <p className="mt-5 font-display text-base italic text-ink/60">
             {invitation.dressCode.note}
           </p>
-
-          {/* paleta sugerida */}
-          <ul className="mt-8 flex items-center justify-center gap-3" aria-label="Paleta de colores sugerida">
-            {invitation.dressCode.suggestedColors.map((color) => (
-              <li
-                key={color}
-                title={color}
-                className="h-7 w-7 rounded-full border border-gold/50 shadow-inner transition-transform duration-300 hover:scale-110"
-                style={{ backgroundColor: color }}
-              />
-            ))}
-          </ul>
         </motion.div>
       </div>
     </section>
