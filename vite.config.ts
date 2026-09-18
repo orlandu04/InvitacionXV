@@ -9,6 +9,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
+      strategies: 'injectManifest',
       includeAssets: ['favicon.svg', 'og-cover.png'],
       manifest: {
         name: 'Tania | Mis XV Años',
@@ -32,9 +33,8 @@ export default defineConfig({
           },
         ],
       },
-      workbox: {
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
-        navigateFallback: '/index.html',
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },
     }),
