@@ -12,6 +12,9 @@ export interface RsvpDoc {
   whatsappJid?: string
   lastError?: string
   retryCount: number
+  // ✅ FIX #4 — tracking de entrega persistente (sobrevive reinicios)
+  waMessageId?: string | null
+  waPendingAt?: Date | null
   createdAt: Date
 }
 
@@ -30,8 +33,20 @@ const rsvpSchema = new Schema<RsvpDoc>(
     whatsappJid: { type: String },
     lastError: { type: String },
     retryCount: { type: Number, default: 0 },
+    // ✅ FIX #4 — id del mensaje en WhatsApp + timestamp del PENDING
+    waMessageId: { type: String, default: null },
+    waPendingAt: { type: Date, default: null },
   },
   { timestamps: { createdAt: true, updatedAt: false } },
 )
+
+// ✅ Índice para el barrido del watchdog (waPendingAt + status)
+rsvpSchema.index({ status: 1, waPendingAt: 1 })
+
+// ✅ Índice para el reaper (status + retryCount)
+rsvpSchema.index({ status: 1, retryCount: 1 })
+
+// ✅ Índice para lookup por messageId (messages.update)
+rsvpSchema.index({ waMessageId: 1 }, { sparse: true })
 
 export const Rsvp = model<RsvpDoc>('Rsvp', rsvpSchema)

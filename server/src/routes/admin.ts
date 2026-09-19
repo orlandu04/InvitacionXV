@@ -9,6 +9,15 @@ import { onEvent } from '../whatsapp/events'
 
 export const adminRouter = Router()
 
+const BROADCAST_BATCH = 10
+const BROADCAST_BATCH_DELAY_MS = 2000
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms)
+  })
+}
+
 /* ── Autenticación del panel ─────────────────────────────── */
 
 adminRouter.post('/login', (req, res) => {
@@ -179,16 +188,40 @@ adminRouter.post('/rsvps/:id/resend', requireAdmin, async (req, res) => {
     res.status(404).json({ error: 'No encontrado' })
     return
   }
+  if (!isSocketOpen()) {
+    res.status(502).json({ error: 'El socket de WhatsApp no está abierto.' })
+    return
+  }
+  const mensaje = await buildRsvpMessage(doc.nombre)
+  let jid: string | null = null
   try {
-    if (!isSocketOpen()) {
-      res.status(502).json({ error: 'El socket de WhatsApp no está abierto.' })
-      return
-    }
-    const mensaje = await buildRsvpMessage(doc.nombre)
-    const jid = doc.whatsappJid || doc.telefono
+    const found = await checkWhatsAppNumbers(phoneVariants(doc.telefono))
+    jid = found[0]?.jid ?? null
+  } catch (error) {
+    res.status(502).json({
+      error: error instanceof Error ? error.message : 'No se pudo verificar el número, intenta más tarde',
+    })
+    return
+  }
+  if (!jid) {
+    res.status(422).json({
+      error: `El número ${doc.telefono} no existe en WhatsApp (verificado). Revisa que tenga WhatsApp activo.`,
+    })
+    return
+  }
+  try {
     await sendMessage(jid, mensaje, { rsvpId: doc.id })
-    await doc.updateOne({ $set: { mensaje, enviado: true, status: 'enviado', lastError: null } })
-    res.json({ ok: true, mensaje })
+    await doc.updateOne({
+      $set: {
+        mensaje,
+        enviado: true,
+        status: 'enviado',
+        whatsappJid: jid,
+        whatsappCheckedAt: new Date(),
+        lastError: null,
+      },
+    })
+    res.json({ ok: true, mensaje, jid })
   } catch (error) {
     res.status(502).json({
       error: error instanceof Error ? error.message : 'WhatsApp no conectado, intenta más tarde',
@@ -203,20 +236,43 @@ adminRouter.post('/rsvps/broadcast', requireAdmin, async (_req, res) => {
   }
   const docs = await Rsvp.find().lean()
   const rows = { enviados: 0, pendientes: 0, errores: [] as string[] }
-  for (const doc of docs) {
-    try {
-      const mensaje = await buildRsvpMessage(doc.nombre)
-      const jid = doc.whatsappJid || doc.telefono
-      await sendMessage(jid, mensaje, { rsvpId: String(doc._id) })
-      await Rsvp.updateOne(
-        { _id: doc._id },
-        { $set: { mensaje, enviado: true, status: 'enviado', lastError: null } },
-      )
-      rows.enviados += 1
-    } catch {
-      rows.pendientes += 1
-      rows.errores.push(doc.nombre)
-    }
+
+  // Verifica y envía en lotes para no disparar rate-limit de onWhatsApp.
+  for (let i = 0; i < docs.length; i += BROADCAST_BATCH) {
+    const lote = docs.slice(i, i + BROADCAST_BATCH)
+    await Promise.all(
+      lote.map(async (doc) => {
+        try {
+          const mensaje = await buildRsvpMessage(doc.nombre)
+          const found = await checkWhatsAppNumbers(phoneVariants(doc.telefono))
+          const jid = found[0]?.jid ?? null
+          if (!jid) {
+            rows.pendientes += 1
+            rows.errores.push(`${doc.nombre}: número no registrado en WhatsApp`)
+            return
+          }
+          await sendMessage(jid, mensaje, { rsvpId: String(doc._id) })
+          await Rsvp.updateOne(
+            { _id: doc._id },
+            {
+              $set: {
+                mensaje,
+                enviado: true,
+                status: 'enviado',
+                whatsappJid: jid,
+                whatsappCheckedAt: new Date(),
+                lastError: null,
+              },
+            },
+          )
+          rows.enviados += 1
+        } catch {
+          rows.pendientes += 1
+          rows.errores.push(doc.nombre)
+        }
+      }),
+    )
+    if (i + BROADCAST_BATCH < docs.length) await sleep(BROADCAST_BATCH_DELAY_MS)
   }
   res.json({ ok: true, ...rows })
 })

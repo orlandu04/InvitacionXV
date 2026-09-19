@@ -10,7 +10,6 @@ import pino from 'pino'
 import QRCode from 'qrcode'
 import { config } from '../config'
 import { Rsvp } from '../db/models/Rsvp'
-import { repairPhone } from '../utils/phone'
 import { clearMongoAuth, useMongoAuthState } from './auth-state'
 import { emitEvent } from './events'
 import { startRetrySweep } from './queue'
@@ -33,20 +32,30 @@ interface PendingEntry {
   at: number
 }
 
-/** Mensajes en PENDING esperando el ACK de WhatsApp, indexados por messageId */
-const pendingByMsg = new Map<string, PendingEntry>()
-
-/**
- * Mensajes que el watchdog marcó como "sin entrega": se retienen un tiempo
- * extra para capturar ACKs tardíos (WhatsApp puede entregar después de un rato).
- */
-const lateByMsg = new Map<string, PendingEntry>()
-
 const PENDING_TIMEOUT_MS = 90 * 1000
 const LATE_KEEP_MS = 30 * 60 * 1000
 
-function trackPending(messageId: string, jid: string, meta: { rsvpId?: string }): void {
+// ✅ FIX #4 — cachés en memoria SOLO como respaldo rápido.
+// La fuente de verdad es MongoDB (campos waMessageId + waPendingAt en Rsvp).
+const pendingByMsg = new Map<string, PendingEntry>()
+const lateByMsg = new Map<string, PendingEntry>()
+
+/**
+ * ✅ FIX #4 — Persiste el pending en Mongo para sobrevivir reinicios.
+ * Guarda waMessageId + waPendingAt en el doc del RSVP.
+ */
+async function trackPending(
+  messageId: string,
+  jid: string,
+  meta: { rsvpId?: string },
+): Promise<void> {
   pendingByMsg.set(messageId, { jid, rsvpId: meta.rsvpId, at: Date.now() })
+  if (meta.rsvpId) {
+    await Rsvp.updateOne(
+      { _id: meta.rsvpId },
+      { $set: { waMessageId: messageId, waPendingAt: new Date() } },
+    )
+  }
 }
 
 function consumePending(messageId?: string | null): PendingEntry | undefined {
@@ -60,18 +69,24 @@ function settleMessage(messageId?: string | null): void {
   lateByMsg.delete(messageId)
 }
 
-/** Vigila mensajes que se quedan en PENDING: WhatsApp no los está entregando. */
+/**
+ * Vigila mensajes que se quedan en PENDING.
+ * ✅ FIX #4 — Barre por DB (waPendingAt) además del Map en memoria,
+ * así sobrevive reinicios de Render.
+ */
 function startPendingWatchdog(): void {
   setInterval(
-    () => {
+    async () => {
       const now = Date.now()
+
+      // 1) Barrido en memoria (rápido)
       for (const [messageId, entry] of pendingByMsg) {
         if (now - entry.at < PENDING_TIMEOUT_MS) continue
         console.warn(
           `[whatsapp] sin entrega → ${entry.jid}${entry.rsvpId ? ` (rsvp ${entry.rsvpId})` : ''} · el número puede no tener WhatsApp, estar apagado o bloquear mensajes`,
         )
         if (entry.rsvpId) {
-          void Rsvp.updateOne(
+          await Rsvp.updateOne(
             { _id: entry.rsvpId },
             { $set: { status: 'fallido', lastError: 'no_delivery' } },
           )
@@ -81,6 +96,21 @@ function startPendingWatchdog(): void {
       }
       for (const [messageId, entry] of lateByMsg) {
         if (now - entry.at > LATE_KEEP_MS) lateByMsg.delete(messageId)
+      }
+
+      // 2) Barrido en DB (sobrevive reinicios)
+      const cutoff = new Date(now - PENDING_TIMEOUT_MS)
+      const stuck = await Rsvp.find({
+        status: 'enviado',
+        waPendingAt: { $type: 'date', $lte: cutoff },
+        waMessageId: { $exists: true, $ne: null },
+      }).limit(50)
+      for (const doc of stuck) {
+        console.warn(`[whatsapp] sin entrega (DB) → rsvp ${doc._id} · ${doc.telefono}`)
+        await Rsvp.updateOne(
+          { _id: doc._id },
+          { $set: { status: 'fallido', lastError: 'no_delivery' }, $unset: { waPendingAt: '' } },
+        )
       }
     },
     30 * 1000,
@@ -96,9 +126,9 @@ const STATUS_LABELS: Record<number, string> = {
   [proto.WebMessageInfo.Status.PLAYED]: 'reproducido',
 }
 
-function describeStatus(status: proto.WebMessageInfo.Status | null | undefined): string {
-  if (status === null || status === undefined) return 'sin estado'
-  return STATUS_LABELS[status] ?? `código ${status}`
+function describeStatus(s: proto.WebMessageInfo.Status | null | undefined): string {
+  if (s === null || s === undefined) return 'sin estado'
+  return STATUS_LABELS[s] ?? `código ${s}`
 }
 
 export function getStatus(): ConnectionStatus {
@@ -110,11 +140,11 @@ export function isReady(): boolean {
 }
 
 /**
- * Verifica que el socket de Baileys esté realmente ABIERTO. En Baileys v6 el
- * socket `ws` es un WebSocketClient con getter `isOpen` (no expone `readyState`).
+ * ✅ FIX #2 — Chequeo REAL del socket.
+ * En Baileys v6 `socket.ws` es un WebSocketClient con getter `isOpen` (no readyState).
  */
 export function isSocketOpen(): boolean {
-  return status.state === 'ready' && socket !== null && socket.ws.isOpen
+  return status.state === 'ready' && socket !== null && socket.ws.isOpen === true
 }
 
 function setStatus(next: ConnectionStatus): void {
@@ -165,6 +195,17 @@ export async function startWhatsApp(): Promise<void> {
       const msgStatus = update.update?.status
       const entry = consumePending(messageId)
       const label = describeStatus(msgStatus)
+
+      // ✅ FIX #4 — Al recibir ACK, limpia waPendingAt en DB
+      const cleanupDb = async () => {
+        if (entry?.rsvpId) {
+          await Rsvp.updateOne(
+            { _id: entry.rsvpId },
+            { $unset: { waPendingAt: '' } },
+          )
+        }
+      }
+
       if (msgStatus === proto.WebMessageInfo.Status.ERROR) {
         console.error(
           `[whatsapp] entrega ERROR → ${jid}${entry?.rsvpId ? ` (rsvp ${entry.rsvpId})` : ''}`,
@@ -172,12 +213,13 @@ export async function startWhatsApp(): Promise<void> {
         if (entry?.rsvpId) {
           await Rsvp.updateOne(
             { _id: entry.rsvpId },
-            { $set: { status: 'fallido', lastError: 'whatsapp_error' } },
+            { $set: { status: 'fallido', lastError: 'whatsapp_error' }, $unset: { waPendingAt: '' } },
           )
         }
         settleMessage(messageId)
         continue
       }
+
       if (
         msgStatus === proto.WebMessageInfo.Status.SERVER_ACK ||
         msgStatus === proto.WebMessageInfo.Status.DELIVERY_ACK ||
@@ -187,8 +229,12 @@ export async function startWhatsApp(): Promise<void> {
           `[whatsapp] ${label} → ${jid}${entry?.rsvpId ? ` (rsvp ${entry.rsvpId})` : ''}`,
         )
         if (entry?.rsvpId) {
-          await Rsvp.updateOne({ _id: entry.rsvpId }, { $set: { status: 'entregado' } })
+          await Rsvp.updateOne(
+            { _id: entry.rsvpId },
+            { $set: { status: 'entregado' } },
+          )
         }
+        await cleanupDb()
         settleMessage(messageId)
       }
     }
@@ -203,7 +249,11 @@ export async function startWhatsApp(): Promise<void> {
         margin: 2,
         errorCorrectionLevel: 'M',
       })
-      setStatus({ state: 'qr', qr: dataUrl, message: 'Escanea el código QR para vincular la línea' })
+      setStatus({
+        state: 'qr',
+        qr: dataUrl,
+        message: 'Escanea el código QR para vincular la línea',
+      })
       return
     }
 
@@ -224,9 +274,7 @@ export async function startWhatsApp(): Promise<void> {
     if (connection === 'close') {
       socket = null
       const statusCode = (
-        lastDisconnect?.error as
-          | { output?: { statusCode?: number } }
-          | undefined
+        lastDisconnect?.error as { output?: { statusCode?: number } } | undefined
       )?.output?.statusCode
 
       if (statusCode === DisconnectReason.loggedOut) {
@@ -257,20 +305,48 @@ export async function startWhatsApp(): Promise<void> {
   console.log('[whatsapp] cliente iniciado')
 }
 
+/**
+ * ✅ FIX #1 — sendMessage SOLO acepta JIDs validados (con @).
+ * Rechaza números crudos para que nunca se derive un JID a mano.
+ *
+ * ✅ FIX #2 — Usa isSocketOpen() en vez de solo status.state.
+ */
 export async function sendMessage(
-  toNumber: string,
+  toJid: string,
   text: string,
   meta?: { rsvpId?: string },
 ): Promise<{ messageId?: string }> {
-  if (!socket || status.state !== 'ready') {
-    throw new Error('WhatsApp no conectado')
+  // ✅ FIX #1: rechazo explícito
+  if (!toJid.includes('@')) {
+    throw new Error(
+      `sendMessage requiere un JID validado (ej. 521234567890@s.whatsapp.net), recibió: ${toJid}`,
+    )
   }
-  const jid = toNumber.includes('@') ? toNumber : `${repairPhone(toNumber)}@s.whatsapp.net`
+
+  // ✅ FIX #2: chequeo real del socket
+  if (!isSocketOpen()) {
+    throw new Error('WhatsApp no conectado o socket cerrado')
+  }
+
+  // Narrowing: isSocketOpen() garantiza socket no-null
+  const sock = socket as WASocket
+  const jid = toJid
+
   console.log(`[whatsapp] enviando → ${jid}`)
-  const info = await socket.sendMessage(jid, { text })
+  const info = await sock.sendMessage(jid, { text })
   const messageId = info?.key?.id ?? undefined
-  if (messageId) trackPending(messageId, jid, meta ?? {})
-  await Rsvp.updateOne({ _id: meta?.rsvpId }, { $set: { status: 'enviado', lastError: null } })
+
+  if (messageId) {
+    await trackPending(messageId, jid, meta ?? {})
+  }
+
+  if (meta?.rsvpId) {
+    await Rsvp.updateOne(
+      { _id: meta.rsvpId },
+      { $set: { status: 'enviado', lastError: null } },
+    )
+  }
+
   return { messageId }
 }
 
@@ -285,15 +361,28 @@ export interface WhatsAppLookup {
 }
 
 /**
- * Verifica (solo lectura) si los números dados están registrados en WhatsApp.
- * Devuelve únicamente los que existen, con su JID real — útil para detectar
- * si el número es válido y bajo qué formato (52 vs 521 en México).
+ * ✅ FIX #3 — Filtra `exists: true` y prioriza `521` cuando ambos formatos existen.
+ * Devuelve solo JIDs realmente registrados en WhatsApp, ordenados por prioridad.
  */
 export async function checkWhatsAppNumbers(numbers: string[]): Promise<WhatsAppLookup[]> {
-  if (!socket || status.state !== 'ready') {
+  if (!isSocketOpen()) {
     throw new Error('WhatsApp no conectado')
   }
+  const sock = socket as WASocket
   const unique = [...new Set(numbers)]
-  const results = await socket.onWhatsApp(...unique)
-  return (results ?? []).map(({ jid }) => ({ jid, phone: jid.split('@')[0] ?? '' }))
+  const results = await sock.onWhatsApp(...unique)
+
+  // ✅ FIX #3a: SOLO los que existen
+  const existentes = (results ?? [])
+    .filter((r) => r?.exists === true)
+    .map((r) => ({ jid: r.jid, phone: r.jid.split('@')[0] ?? '' }))
+
+  // ✅ FIX #3b: prioriza 521 sobre 52 (móviles MX suelen estar registrados con el 1)
+  existentes.sort((a, b) => {
+    const aIs521 = a.jid.startsWith('521') ? 0 : 1
+    const bIs521 = b.jid.startsWith('521') ? 0 : 1
+    return aIs521 - bIs521
+  })
+
+  return existentes
 }

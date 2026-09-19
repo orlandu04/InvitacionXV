@@ -4,7 +4,7 @@ export interface RsvpResult {
   ok: boolean
   id?: string
   mensaje?: string
-  whatsapp?: 'pendiente'
+  whatsapp?: 'enviado' | 'pendiente'
 }
 
 /** Envía la confirmación (nombre + celular) al backend. */

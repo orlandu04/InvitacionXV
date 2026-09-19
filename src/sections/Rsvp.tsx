@@ -28,6 +28,7 @@ export function Rsvp(): React.JSX.Element {
   const [telefono, setTelefono] = useState('')
   const [estado, setEstado] = useState<Estado>('idle')
   const [feedback, setFeedback] = useState('')
+  const [pendienteWa, setPendienteWa] = useState(false)
   const submittedRef = useRef(false)
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>): Promise<void> => {
@@ -43,6 +44,7 @@ export function Rsvp(): React.JSX.Element {
     setFeedback('')
     try {
       const res = await submitRsvp(nombre.trim(), telefono.trim())
+      setPendienteWa(res.whatsapp === 'pendiente')
       setEstado('ok')
       setFeedback(
         res.whatsapp === 'pendiente'
@@ -51,6 +53,7 @@ export function Rsvp(): React.JSX.Element {
       )
     } catch (error) {
       submittedRef.current = false
+      setPendienteWa(false)
       setEstado('error')
       setFeedback(error instanceof Error ? error.message : 'No pudimos registrar tu confirmación.')
     }
@@ -168,15 +171,27 @@ export function Rsvp(): React.JSX.Element {
             </button>
 
             {estado === 'ok' && (
-              <motion.p
+              <motion.div
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center justify-center gap-2 font-display text-sm text-rose-deep"
+                className="flex flex-col items-center gap-1.5"
                 role="status"
               >
-                <CheckCircle2 size={17} strokeWidth={1.6} aria-hidden />
-                {feedback}
-              </motion.p>
+                <p className="flex items-center justify-center gap-2 font-display text-sm text-rose-deep">
+                  <CheckCircle2 size={17} strokeWidth={1.6} aria-hidden />
+                  {feedback}
+                </p>
+                {pendienteWa && (
+                  <a
+                    href={RSVP_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-body text-xs underline decoration-gold/60 underline-offset-4 hover:text-gold-deep"
+                  >
+                    ¿Prefieres escribirnos por WhatsApp de una vez? →
+                  </a>
+                )}
+              </motion.div>
             )}
 
             {estado === 'error' && (

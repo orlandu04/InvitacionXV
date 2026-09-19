@@ -4,8 +4,12 @@ type PhoneResult = { ok: true; phone: string } | { ok: false; error: string }
 
 /**
  * Normaliza un teléfono al formato internacional que WhatsApp espera en el JID:
- * quita espacios/guiones/paréntesis y el "+", y para México agrega el "1" móvil
- * tras el código de país (10 dígitos → 521XXXXXXXXXX, 13 dígitos totales).
+ * quita espacios/guiones/paréntesis y el "+".
+ *
+ * ⚠️ OJO: para México agrega el "1" móvil tras el código de país. Esto es una
+ * SUPOSICIÓN que puede estar mal (números registrados después de 2019 no lo
+ * llevan). Usar SOLO para generar candidatos a `onWhatsApp()`, NUNCA para
+ * construir el JID final de envío.
  */
 export function normalizePhone(raw: string): PhoneResult {
   const digits = raw.replace(/\D/g, '')
@@ -36,6 +40,10 @@ export function normalizePhone(raw: string): PhoneResult {
  * Repara números ya normalizados/guardados antes de la corrección del "1" móvil
  * (ej. MongoDB con "522221234567" de 12 dígitos → "5212221234567").
  * Si el número no coincide con el patrón conocido, lo deja igual.
+ *
+ * ⚠️ Esta función AGREGA el "1" a la fuerza. Solo se usa en `phoneVariants()`
+ * para generar candidatos. NO usar para construir el JID final de envío —
+ * el JID final SIEMPRE viene de `onWhatsApp()`.
  */
 export function repairPhone(raw: string): string {
   const digits = raw.replace(/\D/g, '')
@@ -54,6 +62,8 @@ export function repairPhone(raw: string): string {
  * (México acepta `521XXXXXXXXXX` y `52XXXXXXXXXX`), y en las formas `+`,
  * `@s.whatsapp.net` y ambas. Se manda TODO en un solo `onWhatsApp()` para
  * evitar rate-limit y resolver bajo qué JID está registrado el número.
+ *
+ * ✅ Estas variantes son SOLO candidatos. El JID ganador sale de `onWhatsApp()`.
  */
 export function phoneVariants(raw: string): string[] {
   const digits = raw.replace(/\D/g, '')
@@ -77,17 +87,12 @@ export function phoneVariants(raw: string): string[] {
   return [...variants]
 }
 
-/**
- * JID "más probable" para el envío best-effort cuando la verificación
- * `onWhatsApp` falla por red/socket (sin el `1` móvil, que es el formato
- * moderno que WhatsApp suele devolver como JID real en México).
- */
-export function likelyWhatsAppJid(raw: string): string {
-  const digits = repairPhone(raw)
-  const cc = config.defaultCountryCode
-  const mp = config.mobilePrefix
-  if (mp && cc && digits.length === cc.length + mp.length + 10 && digits.startsWith(cc + mp)) {
-    return `${cc}${digits.slice(cc.length + mp.length)}@s.whatsapp.net`
-  }
-  return `${digits}@s.whatsapp.net`
-}
+// ❌ ELIMINADO: likelyWhatsAppJid()
+//
+// Esta función derivaba un JID a mano (52…@s.whatsapp.net) como fallback
+// cuando `onWhatsApp()` fallaba. Ese es exactamente el bug que causaba
+// "una palomita y esperando mensaje" cuando el número estaba registrado
+// como 521… en vez de 52…
+//
+// Regla de oro: si el JID no viene de `onWhatsApp()`, NO se envía.
+// Si `onWhatsApp()` falla por red → `pendiente (check_failed)`, sin fallback.

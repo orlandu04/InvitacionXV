@@ -13,6 +13,7 @@ function logDatasource(): void {
 
 export async function connectDb(): Promise<void> {
   logDatasource()
-  await mongoose.connect(config.mongodbUri)
+  // Dev: índices automáticos al iterar. Prod: se crean con `npm run ensure-indexes`.
+  await mongoose.connect(config.mongodbUri, { autoIndex: config.nodeEnv !== 'production' })
   console.log('[db] MongoDB conectado')
 }

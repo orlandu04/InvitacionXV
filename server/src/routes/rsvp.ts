@@ -1,8 +1,8 @@
 import { Router } from 'express'
 import { Rsvp } from '../db/models/Rsvp'
 import { buildRsvpMessage } from '../settings'
-import { likelyWhatsAppJid, normalizePhone, phoneVariants } from '../utils/phone'
-import { checkWhatsAppNumbers, isSocketOpen } from '../whatsapp/client'
+import { normalizePhone, phoneVariants } from '../utils/phone'
+import { checkWhatsAppNumbers, isSocketOpen, sendMessage } from '../whatsapp/client'
 import { enqueueRsvpSend } from '../whatsapp/queue'
 
 export const rsvpRouter = Router()
@@ -10,6 +10,25 @@ export const rsvpRouter = Router()
 interface RsvpBody {
   nombre?: unknown
   telefono?: unknown
+}
+
+const SEND_TIMEOUT_MS = 5000
+
+/** Promise.race manual para no dejar la petición colgada si el envío se atora. */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('timeout')), ms)
+    promise.then(
+      (value) => {
+        clearTimeout(timer)
+        resolve(value)
+      },
+      (error) => {
+        clearTimeout(timer)
+        reject(error)
+      },
+    )
+  })
 }
 
 rsvpRouter.post('/', async (req, res) => {
@@ -42,66 +61,59 @@ rsvpRouter.post('/', async (req, res) => {
     return
   }
 
-  // 3) Resolver el JID real con una sola llamada a onWhatsApp.
-  const variants = phoneVariants(parsed.phone)
+  // 3) Resolver el JID REAL con una sola llamada a onWhatsApp.
+  const mensaje = await buildRsvpMessage(doc.nombre)
   let jid: string | null = null
-  let checkError: string | null = null
   try {
-    const found = await checkWhatsAppNumbers(variants)
+    const found = await checkWhatsAppNumbers(phoneVariants(parsed.phone))
     jid = found[0]?.jid ?? null
   } catch (error) {
-    checkError = error instanceof Error ? error.message : 'check_failed'
-  }
-
-  const mensaje = await buildRsvpMessage(doc.nombre)
-
-  if (!jid) {
-    if (checkError) {
-      // La verificación falló (red/socket): no bloquees al invitado. Envía
-      // best-effort al JID más probable y deja el reintento a la cola.
-      const likely = likelyWhatsAppJid(parsed.phone)
-      await doc.updateOne({
-        $set: {
-          status: 'enviado',
-          enviado: true,
-          mensaje,
-          whatsappJid: likely,
-          whatsappCheckedAt: new Date(),
-          lastError: `check_failed: ${checkError}`,
-        },
-      })
-      await enqueueRsvpSend({ rsvpId: doc.id, jid: likely, nombre: doc.nombre })
-      console.warn(
-        `[rsvp] ${doc.nombre} · verificación falló (${checkError}) · best-effort a ${likely}`,
-      )
-      res.status(201).json({ ok: true, id: doc.id, whatsapp: 'enviado' })
-    } else {
-      // WhatsApp respondió: el número NO existe.
-      await doc.updateOne({
-        $set: {
-          status: 'pendiente',
-          whatsappCheckedAt: new Date(),
-          lastError: 'not_on_whatsapp',
-        },
-      })
-      console.warn(`[rsvp] ${doc.nombre} (${parsed.phone}) no existe en WhatsApp`)
-      res.status(201).json({ ok: true, id: doc.id, whatsapp: 'pendiente' })
-    }
+    // 3a) La verificación falló (red/socket): NO se envía sin JID validado.
+    const errMsg = error instanceof Error ? error.message : 'check_failed'
+    await doc.updateOne({
+      $set: {
+        status: 'pendiente',
+        whatsappCheckedAt: new Date(),
+        lastError: `check_failed: ${errMsg}`,
+      },
+    })
+    console.warn(`[rsvp] ${doc.nombre} · verificación falló (${errMsg}) → pendiente`)
+    res.status(201).json({ ok: true, id: doc.id, whatsapp: 'pendiente' })
     return
   }
 
-  // 4) Existe: registrar JID y encolar el envío (3-10 s, con reintentos).
-  await doc.updateOne({
-    $set: {
-      status: 'enviado',
-      enviado: true,
-      mensaje,
-      whatsappJid: jid,
-      whatsappCheckedAt: new Date(),
-      lastError: null,
-    },
-  })
-  await enqueueRsvpSend({ rsvpId: doc.id, jid, nombre: doc.nombre })
-  console.log(`[rsvp] ${doc.nombre} (${parsed.phone}) confirmó → JID ${jid} · enviando…`)
-  res.status(201).json({ ok: true, id: doc.id, whatsapp: 'enviado' })
+  if (!jid) {
+    // 3b) WhatsApp respondió: el número NO existe.
+    await doc.updateOne({
+      $set: {
+        status: 'pendiente',
+        whatsappCheckedAt: new Date(),
+        lastError: 'not_on_whatsapp',
+      },
+    })
+    console.warn(`[rsvp] ${doc.nombre} (${parsed.phone}) no existe en WhatsApp`)
+    res.status(201).json({ ok: true, id: doc.id, whatsapp: 'pendiente' })
+    return
+  }
+
+  await doc.updateOne({ $set: { whatsappJid: jid, whatsappCheckedAt: new Date() } })
+
+  // 4) Envío inline con timeout. sendMessage persiste status/waPendingAt en DB.
+  try {
+    await withTimeout(sendMessage(jid, mensaje, { rsvpId: doc.id }), SEND_TIMEOUT_MS)
+    await doc.updateOne({ $set: { mensaje } })
+    console.log(`[rsvp] ${doc.nombre} (${parsed.phone}) confirmó → ${jid} · enviado`)
+    res.status(201).json({ ok: true, id: doc.id, whatsapp: 'enviado' })
+  } catch (error) {
+    // Timeout/error: no bloquear al invitado. Queda pendiente + cola de reintento.
+    const errMsg = error instanceof Error ? error.message : 'send_failed'
+    await doc.updateOne({
+      $set: { status: 'pendiente', lastError: `send_failed: ${errMsg}` },
+    })
+    await enqueueRsvpSend({ rsvpId: doc.id, jid, nombre: doc.nombre })
+    console.warn(
+      `[rsvp] ${doc.nombre} → ${jid} · envío falló (${errMsg}) · encolado para reintento`,
+    )
+    res.status(201).json({ ok: true, id: doc.id, whatsapp: 'pendiente' })
+  }
 })
