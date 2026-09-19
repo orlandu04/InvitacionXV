@@ -10,7 +10,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
-    "ensure-indexes": "tsx scripts/ensure-indexes.ts"
+    "ensure-indexes": "tsx scripts/ensure-indexes.ts",
+    "clear-rsvps": "tsx scripts/clear-rsvps.ts"
   },
   "engines": {
     "node": ">=20"
