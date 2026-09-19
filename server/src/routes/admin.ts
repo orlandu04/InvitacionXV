@@ -113,34 +113,35 @@ adminRouter.post('/whatsapp/test', requireAdmin, async (req, res) => {
     res.status(400).json({ error: parsed.error })
     return
   }
-  const variants = phoneVariants(parsed.phone)
-  let verificacion: string
-  try {
-    const found = await checkWhatsAppNumbers(variants)
-    if (found.length === 0) {
-      res.status(422).json({
-        error: `El número ${parsed.phone} no existe en WhatsApp (verificado). Revisa que el número sea correcto y que tenga WhatsApp activo.`,
-      })
-      return
-    }
-    verificacion = found.map((entry) => entry.jid).join(', ')
-  } catch (error) {
-    verificacion = `(no se pudo verificar: ${error instanceof Error ? error.message : 'error'})`
-  }
   const mensaje = await buildRsvpMessage('Mensaje de prueba')
   if (!isSocketOpen()) {
     res.status(502).json({ error: 'El socket de WhatsApp no está abierto (¿cerraste sesión o expiró el QR?).' })
     return
   }
+  let ganadorJid: string | null = null
   try {
-    const { messageId } = await sendMessage(parsed.phone, mensaje)
-    const jid = `${parsed.phone}@s.whatsapp.net`
+    const found = await checkWhatsAppNumbers(phoneVariants(parsed.phone))
+    ganadorJid = found[0]?.jid ?? null
+  } catch (error) {
+    // onWhatsApp() falló (socket/red) → NO enviar, nada de best-effort.
+    res.status(502).json({
+      error: error instanceof Error ? error.message : 'No se pudo verificar el número, intenta más tarde',
+    })
+    return
+  }
+  if (!ganadorJid) {
+    res.status(422).json({
+      error: `El número ${parsed.phone} no existe en WhatsApp (verificado). Revisa que el número sea correcto y que tenga WhatsApp activo.`,
+    })
+    return
+  }
+  try {
+    const { messageId } = await sendMessage(ganadorJid, mensaje)
     res.json({
       ok: true,
-      jid,
+      jid: ganadorJid,
       messageId,
-      verificacion,
-      mensaje: `Registrado en WhatsApp: ${verificacion || 'comprobado'}. Mensaje salió a ${jid}. "Enviado" solo significa que se escribió; revisa si llega (antispam/sin contacto guardado puede ocultarlo).`,
+      mensaje: `Verificado en WhatsApp como ${ganadorJid}. Mensaje salió a ese JID. "Enviado" solo significa que se escribió; revisa si llega (antispam/sin contacto guardado puede ocultarlo).`,
     })
   } catch (error) {
     res.status(502).json({ error: error instanceof Error ? error.message : 'WhatsApp no conectado' })
