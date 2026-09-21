@@ -173,6 +173,7 @@ adminRouter.get('/rsvps', requireAdmin, async (_req, res) => {
       id: String(doc._id),
       nombre: doc.nombre,
       telefono: doc.telefono,
+      personas: doc.personas ?? 1,
       mensaje: doc.mensaje,
       enviado: doc.enviado,
       status: doc.status,

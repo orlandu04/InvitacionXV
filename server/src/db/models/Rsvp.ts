@@ -5,6 +5,7 @@ export type RsvpStatus = 'confirmado' | 'pendiente' | 'enviado' | 'entregado' | 
 export interface RsvpDoc {
   nombre: string
   telefono: string
+  personas: number
   mensaje: string
   enviado: boolean
   status: RsvpStatus
@@ -22,6 +23,7 @@ const rsvpSchema = new Schema<RsvpDoc>(
   {
     nombre: { type: String, required: true, trim: true },
     telefono: { type: String, required: true, trim: true },
+    personas: { type: Number, default: 1, min: 1, max: 50 },
     mensaje: { type: String, default: '' },
     enviado: { type: Boolean, default: false },
     status: {

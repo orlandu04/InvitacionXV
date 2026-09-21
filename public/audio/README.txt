@@ -1,4 +1,4 @@
-Coloca aquí la música de fondo de la invitación con el nombre:
+Coloca aquí la música de fondo de la invitación ("Close to You (They Long to Be)") con el nombre:
 
     theme.mp3
 

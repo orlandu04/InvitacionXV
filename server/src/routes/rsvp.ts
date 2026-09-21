@@ -10,6 +10,7 @@ export const rsvpRouter = Router()
 interface RsvpBody {
   nombre?: unknown
   telefono?: unknown
+  personas?: unknown
 }
 
 const SEND_TIMEOUT_MS = 5000
@@ -32,7 +33,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 }
 
 rsvpRouter.post('/', async (req, res) => {
-  const { nombre, telefono } = (req.body ?? {}) as RsvpBody
+  const { nombre, telefono, personas } = (req.body ?? {}) as RsvpBody
 
   if (typeof nombre !== 'string' || !nombre.trim()) {
     res.status(400).json({ error: 'El nombre es obligatorio' })
@@ -47,9 +48,14 @@ rsvpRouter.post('/', async (req, res) => {
     res.status(400).json({ error: parsed.error })
     return
   }
+  const cantidad = typeof personas === 'number' && Number.isFinite(personas) ? personas : Number.parseInt(String(personas), 10)
+  if (!Number.isInteger(cantidad) || cantidad < 1 || cantidad > 50) {
+    res.status(400).json({ error: 'Indica un número de personas válido (1 a 50)' })
+    return
+  }
 
   // 1) Persistir SIEMPRE primero: nunca perder una confirmación.
-  const doc = await Rsvp.create({ nombre: nombre.trim(), telefono: parsed.phone })
+  const doc = await Rsvp.create({ nombre: nombre.trim(), telefono: parsed.phone, personas: cantidad })
 
   // 2) ¿Socket de Baileys realmente abierto?
   if (!isSocketOpen()) {

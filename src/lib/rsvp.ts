@@ -7,12 +7,12 @@ export interface RsvpResult {
   whatsapp?: 'enviado' | 'pendiente'
 }
 
-/** Envía la confirmación (nombre + celular) al backend. */
-export async function submitRsvp(nombre: string, telefono: string): Promise<RsvpResult> {
+/** Envía la confirmación (nombre + celular + número de personas) al backend. */
+export async function submitRsvp(nombre: string, telefono: string, personas: number): Promise<RsvpResult> {
   const res = await fetch(`${apiUrl}/api/rsvps`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ nombre, telefono }),
+    body: JSON.stringify({ nombre, telefono, personas }),
   })
 
   const data = (await res.json().catch(() => null)) as (RsvpResult & { error?: string }) | null

@@ -343,7 +343,7 @@
           }
           wrap.innerHTML =
             '<table><thead><tr>' +
-            '<th>Nombre</th><th>Celular</th><th>Fecha</th><th>WhatsApp</th><th>Acciones</th>' +
+            '<th>Nombre</th><th>Celular</th><th>Personas</th><th>Fecha</th><th>WhatsApp</th><th>Acciones</th>' +
             '</tr></thead><tbody>' +
             rows
               .map((r) => {
@@ -360,6 +360,7 @@
                 return `<tr>
                   <td><strong>${escapeHtml(r.nombre)}</strong></td>
                   <td>${escapeHtml(r.telefono)}</td>
+                  <td>${Number(r.personas || 1)}</td>
                   <td>${fecha}</td>
                   <td><span class="chip ${chip[0]}" title="${escapeHtml(r.whatsappJid || '')}">${chip[1]}</span>${err}</td>
                   <td><div class="actions">

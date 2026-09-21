@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { CheckCircle2, Loader2, MessageCircleHeart, Phone, User } from 'lucide-react'
+import { CheckCircle2, Loader2, MessageCircleHeart, Phone, User, Users } from 'lucide-react'
 import { useRef, useState } from 'react'
 
 import { Sparkles } from '../components/effects/Sparkles'
@@ -26,6 +26,7 @@ type Estado = 'idle' | 'enviando' | 'ok' | 'error'
 export function Rsvp(): React.JSX.Element {
   const [nombre, setNombre] = useState('')
   const [telefono, setTelefono] = useState('')
+  const [personas, setPersonas] = useState<string>('1')
   const [estado, setEstado] = useState<Estado>('idle')
   const [feedback, setFeedback] = useState('')
   const [pendienteWa, setPendienteWa] = useState(false)
@@ -34,16 +35,22 @@ export function Rsvp(): React.JSX.Element {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault()
     if (submittedRef.current) return
+    const cantidad = Number.parseInt(personas, 10)
     if (!nombre.trim() || !telefono.trim()) {
       setEstado('error')
       setFeedback('Completa tu nombre y tu número de celular para confirmar.')
+      return
+    }
+    if (!Number.isInteger(cantidad) || cantidad < 1) {
+      setEstado('error')
+      setFeedback('Indica cuántas personas asistirán (mínimo 1).')
       return
     }
     submittedRef.current = true
     setEstado('enviando')
     setFeedback('')
     try {
-      const res = await submitRsvp(nombre.trim(), telefono.trim())
+      const res = await submitRsvp(nombre.trim(), telefono.trim(), cantidad)
       setPendienteWa(res.whatsapp === 'pendiente')
       setEstado('ok')
       setFeedback(
@@ -150,6 +157,31 @@ export function Rsvp(): React.JSX.Element {
               <p className="mt-2 text-left font-body text-xs text-ink/45">
                 Te enviaremos la confirmación por WhatsApp.
               </p>
+            </div>
+
+            <div className="text-left">
+              <label htmlFor="rsvp-personas" className={LABEL_CLASS}>
+                Número de personas
+              </label>
+              <div className="relative">
+                <Users
+                  size={16}
+                  strokeWidth={1.6}
+                  aria-hidden
+                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gold-deep/70"
+                />
+                <input
+                  id="rsvp-personas"
+                  type="number"
+                  inputMode="numeric"
+                  value={personas}
+                  onChange={(event) => setPersonas(event.target.value)}
+                  placeholder="Ej. 2"
+                  min={1}
+                  max={50}
+                  className={FIELD_CLASS}
+                />
+              </div>
             </div>
 
             <button

@@ -98,7 +98,7 @@ export const invitation = {
 
   music: {
     src: '/audio/theme.mp3',
-    title: 'Nuestra canción',
+    title: 'Close to You (They Long to Be)',
     /** Volumen inicial 0 – 1 */
     initialVolume: 0.65,
   },
