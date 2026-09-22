@@ -58,11 +58,11 @@ export const invitation = {
     heading: 'Sábado 28 de noviembre, 2026',
     details: [
       { icon: 'calendar', label: 'Fecha', value: 'Sábado, 28 de noviembre 2026' },
-      { icon: 'clock', label: 'Misa', value: '16:00 h · Iglesia San Judas Tadeo' },
+      { icon: 'clock', label: 'Misa', value: '16:00 h · Iglesia del Sagrado Corazón de Balcones' },
       {
         icon: 'mapPin',
         label: 'Iglesia',
-        value: 'Hidalgo 2da Secc, Guadalupe Hidalgo, 72490 Heroica Puebla de Zaragoza, Pue',
+        value: 'Av. 3 Sur, Balcones del Sur, 72499 Heroica Puebla de Zaragoza, Pue',
       },
       { icon: 'gem', label: 'Recepción', value: '17:30 h · La Quinta de San Jorge' },
       {
@@ -75,11 +75,11 @@ export const invitation = {
 
   ceremony: {
     eyebrow: 'Ceremonia',
-    venue: 'Iglesia San Judas Tadeo',
-    address: 'Hidalgo 2da Secc, Guadalupe Hidalgo, 72490 Heroica Puebla de Zaragoza, Pue',
+    venue: 'Iglesia del Sagrado Corazón de Balcones',
+    address: 'Av. 3 Sur, Balcones del Sur, 72499 Heroica Puebla de Zaragoza, Pue',
     time: '16:00 h',
     mapsUrl:
-      'https://www.google.com/maps/search/?api=1&query=Iglesia+San+Judas+Tadeo%2C+Hidalgo+2da+Secc%2C+Guadalupe+Hidalgo%2C+72490+Heroica+Puebla+de+Zaragoza%2C+Pue',
+      'https://www.google.com/maps/search/?api=1&query=WQX7%2BM3+Heroica+Puebla+de+Zaragoza%2C+Pue',
   },
 
   dressCode: {

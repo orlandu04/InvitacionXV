@@ -261,6 +261,14 @@ html.has-custom-cursor button {
   line-height: 1.08;
 }
 
+/* Pantallas bajitas (móviles con muy poco alto visible): comprime el título
+   para que la pantalla de inicio quepa completa sin recortarse. */
+@media (max-height: 700px) {
+  .type-script-hero {
+    font-size: clamp(3.2rem, 15vw, 12.5rem);
+  }
+}
+
 .eyebrow {
   font-family: var(--font-body);
   font-weight: 400;

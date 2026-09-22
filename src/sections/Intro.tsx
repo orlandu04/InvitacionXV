@@ -86,7 +86,7 @@ export function Intro(): React.JSX.Element {
 
   return (
     <motion.div
-      className="fixed inset-0 z-[100] overflow-hidden bg-gradient-to-b from-rose-pastel via-blush to-champagne grain"
+      className="fixed inset-x-0 top-0 z-[100] h-dvh overflow-hidden bg-gradient-to-b from-rose-pastel via-blush to-champagne grain"
       initial={{ opacity: 1 }}
       exit={{ opacity: 0, scale: 1.07, filter: 'blur(10px)' }}
       transition={{ duration: 0.95, ease: [0.22, 1, 0.36, 1] }}
@@ -217,7 +217,7 @@ function Welcome({
   onOpen: () => void
 }): React.JSX.Element {
   return (
-    <motion.div className="relative z-10 flex h-full flex-col items-center px-6 pt-[max(5vh,28px)] pb-[max(7vh,36px)] text-center">
+    <motion.div className="relative z-10 flex h-full flex-col items-center px-6 pt-[max(4vh,20px)] pb-[max(5vh,28px)] text-center [@media(max-height:700px)]:pt-[max(3vh,16px)] [@media(max-height:700px)]:pb-[max(4vh,20px)]">
       {/* Zona superior: contenido repartido con aire entre elementos */}
       <motion.div
         variants={welcomeContainer}
@@ -256,7 +256,7 @@ function Welcome({
 
       {/* Botón anclado en la parte inferior (último tercio) */}
       <motion.div
-        className="mt-[3vh]"
+        className="mt-[2.5vh] [@media(max-height:700px)]:mt-[1.5vh]"
         initial={{ opacity: 0, y: 26 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1.6, duration: 0.8, ease: EASE }}
